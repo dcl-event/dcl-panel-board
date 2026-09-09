@@ -1122,10 +1122,10 @@ function rebuild(){
   const {pieces,cut}=genPieces(S.pattern,VW,vh(),S.opt);
   pieces.forEach((p,i)=>{
     p.need=1000;p.got=0;p.open=false;p.label="1000";p.auto=true;
-    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=GOLD;p.ic=null;p.icS=1;p.tx=0;p.ty=0;p.tS=1;
+    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.tx=0;p.ty=0;p.tS=1;
     applyTo(p,old[p.k]);
     if(!p.fx)p.fx="none";
-    if(!p.fxc)p.fxc=GOLD;
+    if(p.fxc===GOLD)p.fxc=null;   // 旧データの既定値は「枠線に合わせる」扱い
     if(p.auto)p.label=String(p.need);
     p.i=i;
   });
@@ -1442,6 +1442,8 @@ function addIcon(url){
   const k="ic"+Date.now().toString(36)+Math.floor(Math.random()*999).toString(36);
   S.icons[k]=url;return k;
 }
+/* 光り方の色：指定が無ければ、その枠の枠線色に合わせる */
+function fxOf(p){return p.fxc||p.bc||GOLD}
 function iconOf(p){return p&&p.ic&&S.icons?S.icons[p.ic]:null}
 function warmIcons(){
   if(!S.icons)return;
@@ -1664,7 +1666,7 @@ function render(keepInspector){
     if(p.fx!=="shine")return;
     const lg=el("linearGradient",{id:"fxg"+i,x1:"0",y1:"0",x2:"1",y2:"0"});
     [[0,0],[.5,.9],[1,0]].forEach(o=>lg.appendChild(
-      el("stop",{offset:o[0],"stop-color":p.fxc||GOLD,"stop-opacity":o[1]})));
+      el("stop",{offset:o[0],"stop-color":fxOf(p),"stop-opacity":o[1]})));
     defs.appendChild(lg);
   });
   svg.appendChild(defs);
@@ -1679,13 +1681,13 @@ function render(keepInspector){
   S.pieces.forEach((p,i)=>{
     const shown=p.open&&!(p._hideUntil&&performance.now()<p._hideUntil);
     const g=el("g",{class:"piece"+(shown?" is-open":"")+(sel.has(p)?" sel":"")+(p.glow?" glow":"")+(p.follow?" follower":""),"data-i":i});
-    if(p.glow)g.setAttribute("style","--gc:"+(p.fxc||p.bc||GOLD));
+    if(p.glow)g.setAttribute("style","--gc:"+fxOf(p));
     const path=el("path",{d:p.d,fill:p.pc||baseFill,"fill-opacity":st.pOpa,
       stroke:p.bc||st.bColor,"stroke-width":st.bWidth*(p.bwm||1),"stroke-linejoin":"round",class:"face"});
     if(p.clip)path.setAttribute("clip-path","url(#pc"+i+")");
     g.appendChild(path);
     if(!p.open&&p.fx&&p.fx!=="none"){
-      const fc=p.fxc||GOLD,b=dBox(p);
+      const fc=fxOf(p),b=dBox(p);
       if(p.fx==="breathe"){
         g.appendChild(el("path",{d:p.d,fill:fc,class:"fx-breathe",
           "clip-path":p.clip?"url(#pc"+i+")":null}));
@@ -2172,7 +2174,10 @@ function paintSel(){
         </select>
       </div>
       <div class="row"><label>光の色</label>
-        <input type="color" id="sFxc" value="${head.fxc||GOLD}"></div>
+        <input type="color" id="sFxc" value="${fxOf(head)}"></div>
+      <div class="row"><label></label>
+        <button class="tbtn grow" id="sFxcAuto" ${head.fxc?"":"disabled"}>枠線の色に合わせる</button>
+      </div>
       <div class="row"><label></label>
         <label class="toggle"><input type="checkbox" id="sGlow" ${head.glow?"checked":""}>枠もぼんやり光らせる</label>
       </div>
@@ -2271,13 +2276,15 @@ function paintSel(){
   $("sClose").onclick=()=>{pushUndo();arr.forEach(p=>{p.open=false;p.got=0});render();save()};
   $("sFx").value=head.fx||"none";
   $("sGold").onclick=()=>{pushUndo();
-    arr.forEach(p=>{p.bc=GOLD;p.bwm=2;p.glow=true;p.fx="shine";p.fxc=GOLD});
+    arr.forEach(p=>{p.bc=GOLD;p.bwm=2;p.glow=true;p.fx="shine";p.fxc=null});
     render();paintSel();save()};
   $("sPlain").onclick=()=>{pushUndo();
-    arr.forEach(p=>{p.bc=null;p.pc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=GOLD});
+    arr.forEach(p=>{p.bc=null;p.pc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null});
     render();paintSel();save()};
   $("sFx").onchange=()=>{arr.forEach(p=>p.fx=$("sFx").value);render();save()};
-  $("sFxc").oninput=()=>{arr.forEach(p=>p.fxc=$("sFxc").value);render();save()};
+  $("sFxc").oninput=()=>{arr.forEach(p=>p.fxc=$("sFxc").value);
+    $("sFxcAuto").disabled=false;render(true);save()};
+  $("sFxcAuto").onclick=()=>{pushUndo();arr.forEach(p=>p.fxc=null);render();paintSel();save()};
   $("sBc").oninput=()=>{arr.forEach(p=>p.bc=$("sBc").value);render();save()};
   $("sPc").oninput=()=>{arr.forEach(p=>p.pc=$("sPc").value);render();save()};
   $("sBw").onchange=()=>{arr.forEach(p=>p.bwm=+$("sBw").value);render();save()};
@@ -2762,7 +2769,7 @@ function seed(){
   S=DEF();S.img.reveal=sampleImage();
   rebuild();
   const c=S.pieces.find(p=>p.k.charAt(0)==="c");
-  if(c){c.need=10000;c.label="10000";c.bc=GOLD;c.bwm=2;c.glow=true;c.fx="shine";c.fxc=GOLD}
+  if(c){c.need=10000;c.label="10000";c.bc=GOLD;c.bwm=2;c.glow=true;c.fx="shine";c.fxc=null}
   if(S.pieces[0]){S.pieces[0].got=1000;S.pieces[0].open=true}
   if(S.pieces[2])S.pieces[2].got=300;
 }
