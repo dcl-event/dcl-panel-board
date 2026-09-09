@@ -58,6 +58,16 @@ button{cursor:pointer}
   background:radial-gradient(120% 90% at 50% 0%,#1A1C27 0%,var(--stage) 55%,#0E0F16 100%)}
 .stage{flex:1;min-height:0;display:grid;place-items:center;padding:22px;position:relative}
 .stage[data-bg="green"]{background:#00B140}
+.bg-alpha.mode-live .stagewrap,.bg-alpha.mode-live .stage,
+.solo,.solo .stagewrap,.solo .stage{background:transparent!important}
+.bg-alpha.mode-live .board,.solo .board{box-shadow:none}
+.solo .topbar,.solo .rail,.solo .livebar{display:none}
+.solo .stage{padding:10px}
+#soloExit{position:fixed;top:10px;right:12px;z-index:90;width:34px;height:34px;border-radius:50%;
+  border:0;background:rgba(0,0,0,.45);color:#fff;font-size:16px;display:none;place-items:center;
+  opacity:0;transition:opacity .18s}
+#soloExit:hover{opacity:1}
+.solo #soloExit{display:grid}
 .stage[data-bg="checker"]{background-color:#1a1b24;
   background-image:linear-gradient(45deg,#22242F 25%,transparent 25%),linear-gradient(-45deg,#22242F 25%,transparent 25%),
     linear-gradient(45deg,transparent 75%,#22242F 75%),linear-gradient(-45deg,transparent 75%,#22242F 75%);
@@ -527,6 +537,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     </div>
     <div class="spacer"></div>
     <span class="saved" id="saved">自動保存</span>
+    <button class="tbtn ghost" id="btnSolo">盤面だけ</button>
     <button class="tbtn ghost" id="btnFull">全画面</button>
     <div class="menuwrap">
       <button class="tbtn ghost" id="btnMenu">ファイル ▾</button>
@@ -683,7 +694,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <select id="bgSel" class="grow">
             <option value="dark">暗幕（作業用）</option>
             <option value="green">クロマキー緑（OBS）</option>
-            <option value="checker">透過チェック</option>
+            <option value="checker">透明（OBS用）</option>
           </select>
         </div>
       </div>
@@ -703,6 +714,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
 
 <input type="file" id="fileReveal" accept="image/*,video/*" hidden>
 <input type="file" id="fileCover" accept="image/*,video/*" hidden>
+<button id="soloExit" title="もどす（Esc）">✕</button>
 <input type="file" id="fileIcon" accept="image/*" hidden>
 <input type="file" id="fileJson" accept="application/json,.json" hidden>
 
@@ -2276,7 +2288,7 @@ function setMode(edit){
   $("mEdit").setAttribute("aria-pressed",edit);
   $("mLive").setAttribute("aria-pressed",!edit);
   if(!edit)sel=new Set();else setCur(null);
-  render();requestAnimationFrame(layout);
+  applyBg();render();requestAnimationFrame(layout);
 }
 $("mEdit").onclick=()=>setMode(true);
 $("mLive").onclick=()=>setMode(false);
@@ -2318,7 +2330,20 @@ $("pSwatch").addEventListener("click",e=>{
 });
 $("unifyFill").onclick=()=>{pushUndo();S.pieces.forEach(q=>q.pc=null);render();save()};
 $("unifyEdge").onclick=()=>{pushUndo();S.pieces.forEach(q=>{q.bc=null;q.bwm=1});render();save()};
-$("bgSel").onchange=()=>{S.bg=$("bgSel").value;$("stage").dataset.bg=S.bg;save()};
+function applyBg(){
+  $("stage").dataset.bg=S.bg;
+  $("app").classList.toggle("bg-alpha",S.bg==="checker");
+  document.body.style.background=(S.bg==="checker"&&
+    ($("app").classList.contains("mode-live")||document.body.classList.contains("solo")))
+    ?"transparent":"";
+}
+$("bgSel").onchange=()=>{S.bg=$("bgSel").value;applyBg();save()};
+function setSolo(on){
+  document.body.classList.toggle("solo",on);
+  applyBg();requestAnimationFrame(layout);setTimeout(layout,120);
+}
+$("btnSolo").onclick=()=>setSolo(!document.body.classList.contains("solo"));
+$("soloExit").onclick=()=>setSolo(false);
 $("vidSound").onchange=()=>{S.vidSound=$("vidSound").checked;$("rvid").muted=!S.vidSound;
   if(S.vidSound)$("rvid").play().catch(()=>{});save()};
 $("vidRestart").onchange=()=>{S.vidRestart=$("vidRestart").checked;save()};
@@ -2526,7 +2551,10 @@ $("btnPng").onclick=()=>{
 document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){e.preventDefault();doUndo();return}
   if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
-  if(e.key==="Escape"){sel=new Set();paintSel();setCur(null)}
+  if(e.key==="Escape"){
+    if(document.body.classList.contains("solo")){setSolo(false);return}
+    sel=new Set();paintSel();setCur(null);
+  }
   if(!isEdit()&&cur){
     if(e.key==="+"||e.key==="="||e.key==="Enter"||e.key===" "){e.preventDefault();hitPiece(cur,1);return}
     if(e.key==="-"||e.key==="_"){e.preventDefault();hitPiece(cur,-1);return}
@@ -2582,7 +2610,7 @@ $("fileMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("file
 /* ============ boot ============ */
 function syncUI(){
   const st=S.style;
-  $("bgSel").value=S.bg;$("stage").dataset.bg=S.bg;
+  $("bgSel").value=S.bg;applyBg();
   $("pColor").value=st.pColor;$("pOpa").value=st.pOpa;$("bColor").value=st.bColor;
   $("bWidth").value=st.bWidth;$("fColor").value=st.fColor;$("fWeight").value=st.fWeight;$("fSize").value=st.fSize;
   const fr=S.frame||{};
