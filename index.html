@@ -134,7 +134,9 @@ button{cursor:pointer}
 @keyframes fxspark{0%,100%{opacity:0;transform:scale(.25)}45%{opacity:1;transform:scale(1)}}
 .mode-edit .piece{cursor:pointer}
 .mode-live .piece{cursor:pointer}
-.piece.sel .face{stroke:var(--gold);stroke-width:6;stroke-dasharray:none}
+.selring{fill:none;pointer-events:none}
+.selring.mark{stroke-dasharray:20 13;animation:march 1.1s linear infinite}
+@media (prefers-reduced-motion:reduce){.selring.mark{animation:none}}
 .mode-live .no{display:none}
 .piece.follower{pointer-events:none}
 .no{font-family:var(--mono);fill:rgba(255,255,255,.6)}
@@ -1749,6 +1751,7 @@ function render(keepInspector){
     p._g=g;
     (p.cut&&gCut?gCut:gTop).appendChild(g);
   });
+  svg.appendChild(el("g",{id:"selRings"}));
   const ring=el("path",{id:"curRing"});svg.appendChild(ring);
   // shrink any line that came out wider than its panel
   fitList.forEach(f=>{
@@ -2109,8 +2112,40 @@ function setOpt(k,v,quiet){
 }
 
 /* ============ selection & inspector ============ */
+function lum(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(hex||"");
+  if(!m)return .5;
+  const n=parseInt(m[1],16),f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+  return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255);
+}
+/* 選択枠は全パネルより上に描く（隣のマスに上書きされないように）。
+   色はそのマスの色と反対側に振る。 */
+function drawSelRings(){
+  const g=$("selRings");
+  if(!g)return;
+  g.innerHTML="";
+  if(!sel.size||!isEdit())return;
+  const st=S.style,H=vh();
+  const w=Math.max(4,Math.min(VW,H)*.012);
+  sel.forEach(p=>{
+    const known=p.pc||(S.img.cover||S.img.coverKind==="video"?null:st.pColor);
+    const light=known?lum(known)>.5:false;
+    const ink=light?"#16181F":"#FFFFFF";
+    const halo=light?"#FFFFFF":"#16181F";
+    const mk=(stroke,sw,cls)=>{
+      const e=el("path",{d:p.d,stroke,"stroke-width":sw.toFixed(1),
+        "stroke-linejoin":"round",class:"selring"+(cls||"")});
+      if(p.cut&&S.cut)e.setAttribute("mask","url(#cutmask)");
+      if(p.clip)e.setAttribute("clip-path","url(#pc"+p.i+")");
+      g.appendChild(e);
+    };
+    mk(halo,w*2.1,"");
+    mk(ink,w," mark");
+  });
+}
 function paintSel(){
   S.pieces.forEach(p=>{if(p._g)p._g.classList.toggle("sel",sel.has(p))});
+  drawSelRings();
   const body=$("selBody"),arr=[...sel];
   if(!arr.length){body.innerHTML=`<div class="empty">パネルをクリック／盤面をドラッグで選択。</div>`;return}
   const one=arr.length===1?arr[0]:null,head=arr[0];
