@@ -143,9 +143,20 @@ button{cursor:pointer}
 
 .marquee{position:absolute;z-index:9;border:1.5px solid var(--gold);background:var(--gold-wash);pointer-events:none}
 .complete{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;
-  background:radial-gradient(60% 60% at 50% 50%,rgba(245,179,60,.20),transparent 70%);animation:fadein .5s ease both}
-.complete span{font-weight:900;font-size:clamp(22px,4.4vw,54px);letter-spacing:.16em;color:#fff;
-  text-shadow:0 2px 0 var(--gold-deep),0 0 26px rgba(245,179,60,.85)}
+  opacity:0;transition:opacity .5s ease}
+.complete.show{opacity:1;
+  background:radial-gradient(62% 62% at 50% 50%,var(--cc-wash,rgba(245,179,60,.24)),transparent 72%)}
+.complete span{font-family:"M PLUS Rounded 1c",var(--sans);font-weight:800;
+  font-size:clamp(34px,9vw,120px);letter-spacing:.03em;line-height:1;color:#fff;white-space:nowrap;
+  text-shadow:0 0 3px rgba(0,0,0,.35),0 6px 0 var(--cc-deep,#C98A1E),
+              0 12px 26px rgba(0,0,0,.35),0 0 46px var(--cc,#F5B33C)}
+.complete.show span{animation:cmpPop .72s cubic-bezier(.2,1.5,.35,1) both,
+  cmpGlow 2.2s .72s ease-in-out infinite}
+@keyframes cmpPop{0%{transform:scale(.28) rotate(-9deg);opacity:0}
+  55%{transform:scale(1.14) rotate(2.5deg);opacity:1}
+  100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes cmpGlow{0%,100%{filter:drop-shadow(0 0 0 var(--cc,#F5B33C))}
+  50%{filter:drop-shadow(0 0 22px var(--cc,#F5B33C))}}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 
 .livebar{flex:0 0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 16px;
@@ -1817,17 +1828,39 @@ function paintStats(){
   $("statSum").textContent=fmt(v.reduce((a,p)=>a+p.got,0));
   $("bar").style.width=(v.length?op/v.length*100:0)+"%";
 }
+let cmpTimers=[],cmpDone=false;
 function checkComplete(){
-  const old=$("cmp");if(old)old.remove();
   renderFrame();
   const cv=counted();
-  if(cv.length&&cv.every(p=>p.open)){
+  if(!cv.length)return;
+  const done=cv.every(p=>p.open);
+  if(!done){
+    const cur=$("cmp");if(cur)cur.remove();
+    cmpTimers.forEach(clearTimeout);cmpTimers=[];cmpDone=false;
+    return;
+  }
+  if(cmpDone)return;
+  cmpDone=true;
+  const wait=S.fxBurst===false?200:2450;               // 降った図形が引ききってから
+  cmpTimers.push(setTimeout(()=>{
+    const name=S.pattern==="center"?(S.opt.shape||"heart"):"star";
+    const cl=burstColors(name),main=cl[0],deep=cl[cl.length-1];
     const d=document.createElement("div");
-    d.className="complete";d.id="cmp";d.innerHTML="<span>コンプリート</span>";
+    d.className="complete";d.id="cmp";
+    d.innerHTML="<span>COMPLETE!</span>";
+    d.style.setProperty("--cc",main);
+    d.style.setProperty("--cc-deep",deep);
+    d.style.setProperty("--cc-wash",main+"3D");
     $("board").appendChild(d);
-    if(S.img.revealKind==="video"&&S.vidRestart!==false&&!old){
-      const v=$("rvid");try{v.currentTime=0;v.play().catch(()=>{})}catch(e){}
-    }
+    frameTick(()=>d.classList.add("show"));
+    cmpTimers.push(setTimeout(playCannon,300));
+    cmpTimers.push(setTimeout(()=>{                    // 数秒で引っ込む
+      d.classList.remove("show");
+      cmpTimers.push(setTimeout(()=>{d.remove();cmpTimers=[]},700));
+    },4200));
+  },wait));
+  if(S.img.revealKind==="video"&&S.vidRestart!==false){
+    const v=$("rvid");try{v.currentTime=0;v.play().catch(()=>{})}catch(e){}
   }
 }
 
@@ -1992,17 +2025,48 @@ function playBurst(){
   burst={t0:performance.now(),pts,path,
     total:FILL_MS+HOLD_MS+DRAIN_SPAN+OUT_MS+260};
   $("fxcv").classList.add("on");
-  frameTick(burstLoop);
+  fxKick();
 }
-function burstLoop(){
-  if(!burst)return;
-  const cv=$("fxcv"),dpr=Math.min(2,window.devicePixelRatio||1);
+/* 両サイドから飛び出すお祝いのクラッカー */
+let cannon=null;
+function playCannon(){
+  if(S.fxBurst===false||!BW||!BH)return
+  if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return
+  const name=S.pattern==="center"?(S.opt.shape||"heart"):"star";
+  const path=new Path2D(poly(shapePts(name,0,0,1)));
+  const cl=burstColors(name),H=vh(),base=Math.min(VW,H)/26;
+  const EMIT=3000,LIFE=2500,pts=[];
+  for(let i=0;i<140;i++){
+    const left=i%2===0;
+    const ang=(left?-52:-128)*Math.PI/180+(Math.random()-.5)*.66;
+    const sp=880+Math.random()*980;
+    pts.push({
+      x:left?-base:VW+base,y:H*(.78+Math.random()*.16),
+      vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,
+      s:base*(.55+Math.random()*.85),rot:Math.random()*6.3,spin:(Math.random()-.5)*12,
+      c:cl[(Math.random()*cl.length)|0],
+      t0:Math.random()*EMIT,life:LIFE*(.7+Math.random()*.55)
+    });
+  }
+  cannon={t0:performance.now(),pts,path,total:EMIT+LIFE+400};
+  $("fxcv").classList.add("on");
+  fxKick();
+}
+let fxRunning=false;
+function fxKick(){if(fxRunning)return;fxRunning=true;frameTick(fxLoop)}
+function fxLoop(){
+  fxRunning=false;
+  const cvx=$("fxcv");
+  if(!burst&&!cannon){cvx.classList.remove("on");return}
+  const cv=cvx,dpr=Math.min(2,window.devicePixelRatio||1);
   const w=Math.max(1,Math.round(BW*dpr)),h=Math.max(1,Math.round(BH*dpr));
   if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
   const x=cv.getContext("2d");
   x.setTransform(dpr,0,0,dpr,0,0);
   x.clearRect(0,0,BW,BH);
-  const el=performance.now()-burst.t0;
+  const now=performance.now(),Hb=vh();
+  if(burst){
+  const el=now-burst.t0;
   burst.pts.forEach(q=>{
     let px=q.x,py,al=1,rot=q.rot;
     if(el<q.delay)return;
@@ -2022,8 +2086,24 @@ function burstLoop(){
     x.save();x.globalAlpha=al;x.translate(px,py);x.rotate(rot);x.scale(q.s,q.s);
     x.fillStyle=q.c;x.fill(burst.path);x.restore();
   });
-  if(el>burst.total){burst=null;cv.classList.remove("on");x.clearRect(0,0,BW,BH);return}
-  frameTick(burstLoop);
+  if(el>burst.total)burst=null;
+  }
+  if(cannon){
+    const el=now-cannon.t0,G=1500;
+    cannon.pts.forEach(q=>{
+      const t=(el-q.t0)/1000;
+      if(t<0||t*1000>q.life)return;
+      const px=q.x+q.vx*t,py=q.y+q.vy*t+.5*G*t*t;
+      if(py>Hb+q.s*3)return;
+      const k=t*1000/q.life,al=k>.72?1-(k-.72)/.28:1;
+      x.save();x.globalAlpha=Math.max(0,al);
+      x.translate(px,py);x.rotate(q.rot+t*q.spin);x.scale(q.s,q.s);
+      x.fillStyle=q.c;x.fill(cannon.path);x.restore();
+    });
+    if(el>cannon.total)cannon=null;
+  }
+  if(!burst&&!cannon){cv.classList.remove("on");x.clearRect(0,0,BW,BH);return}
+  fxKick();
 }
 
 /* ============ pattern picker ============ */
