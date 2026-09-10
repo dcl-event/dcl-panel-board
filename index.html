@@ -181,7 +181,8 @@ button{cursor:pointer}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 
 .livebar{flex:0 0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 16px;
-  background:linear-gradient(180deg,#1B1D28,#191B25);border-top:1px solid var(--line)}
+  background:linear-gradient(180deg,#1B1D28,#191B25);border-top:1px solid var(--line);
+  position:relative;z-index:30}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
 .chips{display:flex;gap:6px;align-items:center}
 .chip{border:1px solid var(--line);background:var(--ink);color:var(--muted);padding:7px 14px;border-radius:8px;
@@ -1725,8 +1726,38 @@ function layout(){
   let w=aw/grow,h=w/ar;
   if(h*grow>ah){h=ah/grow;w=h*ar}
   BW=Math.round(w);BH=Math.round(h);
+  b.style.transform="";
   b.style.width=BW+"px";b.style.height=BH+"px";
   renderFrame();renderTitle();
+  // タイトルを盤面の外に置いたら、その分だけ盤面を引いて全部が収まるようにする
+  const tt=S.title||{};
+  if(tt.on){
+    const el2=$("ttl");
+    for(let i=0;i<8;i++){
+      if(!el2.classList.contains("on"))break;
+      const sr=st.getBoundingClientRect(),br=b.getBoundingClientRect(),tr=el2.getBoundingClientRect();
+      if(tr.width<2)break;
+      const uT=Math.min(br.top,tr.top),uB=Math.max(br.bottom,tr.bottom);
+      const uL=Math.min(br.left,tr.left),uR=Math.max(br.right,tr.right);
+      const k=Math.min((sr.height-14)/Math.max(1,uB-uT),(sr.width-14)/Math.max(1,uR-uL),1);
+      if(k>.998)break;
+      BW=Math.max(120,Math.round(BW*k));BH=Math.round(BW/ar);
+      b.style.width=BW+"px";b.style.height=BH+"px";
+      renderFrame();renderTitle();
+    }
+    // 盤面＋タイトルのかたまりが中央に来るようにずらす
+    if(el2.classList.contains("on")){
+      const sr=st.getBoundingClientRect(),br=b.getBoundingClientRect(),tr=el2.getBoundingClientRect();
+      if(tr.width>2){
+        const uT=Math.min(br.top,tr.top),uB=Math.max(br.bottom,tr.bottom);
+        const uL=Math.min(br.left,tr.left),uR=Math.max(br.right,tr.right);
+        const dy=(sr.top+sr.bottom)/2-(uT+uB)/2;
+        const dx=(sr.left+sr.right)/2-(uL+uR)/2;
+        if(Math.abs(dx)>.5||Math.abs(dy)>.5)
+          b.style.transform="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)";
+      }
+    }
+  }
   b.style.backgroundImage=(S.img.reveal&&S.img.revealKind!=="video")?`url(${S.img.reveal})`:"none";
 }
 
@@ -2829,7 +2860,7 @@ function setMode(edit){
   $("mEdit").setAttribute("aria-pressed",edit);
   $("mLive").setAttribute("aria-pressed",!edit);
   if(!edit)sel=new Set();else setCur(null);
-  applyBg();render();requestAnimationFrame(layout);
+  applyBg();render();frameTick(layout);setTimeout(layout,140);
 }
 $("mEdit").onclick=()=>setMode(true);
 $("mLive").onclick=()=>setMode(false);
