@@ -991,20 +991,15 @@ const RAW={
   crown:()=>[[-.86,.62],[.86,.62],[1,-.30],[.50,.05],[0,-.62],[-.50,.05],[-1,-.30]],
   /* 登竜門用の龍の頭（右向き） */
   /* 頭・鼻先・角・あごひげ・たてがみを合体させて輪郭を取る */
-  /* 正面から見た龍の顔（左右対称） */
+  /* 正面から見た龍の顔：もふもふのたてがみ＋小さい角（左右対称） */
   dragon:()=>{
-    const half=[
-      {p:[[.16,-.34],[.40,-1.00],[.62,-.30]]},          // 角
-      {p:[[.36,.18],[1.00,.40],[.34,.38]]}              // ひげ
-    ];
-    const parts=[
-      {c:[0,-.10,.50]},
-      {p:[[-.92,-.24],[.92,-.24],[.78,.30],[-.78,.30]]},// 頭（横に広い）
-      {p:[[-.36,.06],[.36,.06],[.26,.74],[-.26,.74]]},  // 鼻づら
-      {p:[[-.17,.60],[0,1.00],[.17,.60]]}               // あごひげ
-    ];
-    half.forEach(o=>{parts.push(o);parts.push({p:o.p.map(q=>[-q[0],q[1]])})});
-    return unionPolar([0,0],parts,260);
+    const parts=[{c:[0,.02,.56]}],N=11;
+    for(let i=0;i<N;i++){
+      const a=-Math.PI/2+i/N*Math.PI*2;
+      parts.push({c:[Math.cos(a)*.56,.02+Math.sin(a)*.54,.27]});
+    }
+    [1,-1].forEach(k=>parts.push({p:[[k*.13,-.64],[k*.30,-1.06],[k*.47,-.58]]}));
+    return unionPolar([0,.02],parts,320);
   }
 };
 const SHAPE_LABEL={heart:"ハート",star:"星",circle:"丸",rhombus:"ひし形",hex:"六角",flower:"花",
@@ -2404,7 +2399,7 @@ const SHAPE_COLORS={
   star:   ["#FFD34D","#FFD34D","#FFC01F","#FFE99A","#FFAE00"],
   hex:    ["#FFC53D","#FFB000","#FFE08A","#E09400"],
   drop:   ["#4FC3F7","#4FC3F7","#8ED8FF","#29A8E0","#CDEEFF"],
-  dragon: ["#FFD34D","#FFD34D","#7BE38B","#2FA36B","#FFF0AE"],
+  dragon: ["#6FD08C","#6FD08C","#F2A03D","#2FA36B","#FFE9A8"],
   rhombus:["#5AC8FA","#8FE1FF","#2BB3E8","#C9F0FF"],
   cloud:  ["#FFFFFF","#FFFFFF","#EAF4FF","#CFE6FF","#B7D8F5"],
   circle: ["#FF7FB8","#FFD34D","#67D9C0","#9E8CFF","#FFB7D5"]
