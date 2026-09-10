@@ -135,7 +135,8 @@ button{cursor:pointer}
 .mode-edit .piece{cursor:pointer}
 .mode-live .piece{cursor:pointer}
 .selring{fill:none;pointer-events:none}
-.selring.mark{stroke-dasharray:20 13;animation:march 1.1s linear infinite}
+.selring.mark{stroke-dasharray:22 14;animation:selmarch 1.35s linear infinite}
+@keyframes selmarch{from{stroke-dashoffset:0}to{stroke-dashoffset:-36}}
 @media (prefers-reduced-motion:reduce){.selring.mark{animation:none}}
 .mode-live .no{display:none}
 .piece.follower{pointer-events:none}
