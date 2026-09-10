@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8E%B4%3C/text%3E%3C/svg%3E">
 <title>パネル開け卓</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Dela+Gothic+One&family=RocknRoll+One&family=Yusei+Magic&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 :root{
   --ink:#0F1016;--stage:#14151E;--surface:#1B1D28;--surface-2:#232636;
@@ -81,6 +81,22 @@ button{cursor:pointer}
 #cvid{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
 #ccv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none}
 #fxcv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:15}
+#ttl{position:absolute;z-index:19;display:none;width:max-content;max-width:88%;text-align:center;
+  transform:translate(-50%,-50%);white-space:pre-wrap;line-height:1.25;pointer-events:none}
+#ttl.on{display:block}
+.mode-edit #ttl.on{pointer-events:auto;cursor:move}
+#ttl span{display:inline-block;padding:.28em .62em}
+#ttl.g-soft span{filter:drop-shadow(0 0 8px var(--tg,#FF57A0))}
+#ttl.g-pulse span{animation:ttlGlow 2.2s ease-in-out infinite}
+@keyframes ttlGlow{0%,100%{filter:drop-shadow(0 0 2px var(--tg,#FF57A0))}
+  50%{filter:drop-shadow(0 0 20px var(--tg,#FF57A0))}}
+.mode-edit #ttl.on::after{content:"";position:absolute;inset:-6px;border:1.5px dashed rgba(255,87,160,.75);
+  border-radius:10px;pointer-events:none}
+.fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.fnt{border:1.5px solid var(--edge);background:#fff;border-radius:11px;padding:7px 2px;
+  font-size:17px;line-height:1;color:var(--plum);transition:.15s}
+.fnt:hover{border-color:var(--pink)}
+.fnt[aria-pressed="true"]{border-color:var(--pink);background:var(--pink-wash);color:var(--pink-deep)}
 #frame{position:absolute;left:calc(-1*var(--fm,0px));top:calc(-1*var(--fm,0px));
   right:calc(-1*var(--fm,0px));bottom:calc(-1*var(--fm,0px));
   pointer-events:none;z-index:18;display:none}
@@ -592,7 +608,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
   <div class="main">
     <div class="stagewrap">
       <div class="stage" id="stage" data-bg="dark">
-        <div class="board" id="board"><svg id="frame"></svg><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="fxcv"></canvas></div>
+        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="fxcv"></canvas></div>
       </div>
       <div class="livebar">
         <div class="cursel" id="cursel">
@@ -669,6 +685,50 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="row"><label>太さ</label>
           <input type="range" id="frSize" min="0.5" max="2" step="0.05" value="1">
           <span class="val" id="vFr">1.0</span></div>
+      </div>
+
+      <div class="sect">
+        <h3>タイトル</h3>
+        <div class="row"><label></label>
+          <label class="toggle"><input type="checkbox" id="tOn">タイトルを出す</label>
+        </div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:8px">文字</label>
+          <textarea id="tText" class="grow" placeholder="開けたら…な写真が…"></textarea></div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">書体</label>
+          <div class="fonts grow" id="tFonts"></div></div>
+        <div class="row"><label>大きさ</label>
+          <input type="range" id="tSize" min="0.2" max="2.5" step="0.02" value="1">
+          <span class="val" id="vTSz">1.0</span></div>
+        <div class="row"><label>よこ位置</label>
+          <input type="range" id="tX" min="0" max="1" step="0.005" value="0.5">
+          <span class="val" id="vTX2">50%</span></div>
+        <div class="row"><label>たて位置</label>
+          <input type="range" id="tY" min="0" max="1" step="0.005" value="0.16">
+          <span class="val" id="vTY2">12%</span></div>
+        <div class="row"><label>文字色</label><input type="color" id="tColor" value="#FFFFFF"></div>
+        <div class="row"><label>フチの色</label><input type="color" id="tEdgeColor" value="#FF57A0"></div>
+        <div class="row"><label>フチの太さ</label>
+          <input type="range" id="tEdge" min="0" max="14" step="0.5" value="5">
+          <span class="val" id="vTEd">5</span></div>
+        <div class="row"><label>光り方</label>
+          <select id="tGlow" class="grow">
+            <option value="none">なし</option>
+            <option value="soft">ふんわり光る</option>
+            <option value="pulse">ゆっくり明滅</option>
+          </select></div>
+        <div class="row"><label>光の色</label><input type="color" id="tGlowColor" value="#FF57A0"></div>
+        <div class="row"><label>箱の色</label><input type="color" id="tBox" value="#3B2A38"></div>
+        <div class="row"><label>箱の濃さ</label>
+          <input type="range" id="tBoxA" min="0" max="1" step="0.05" value="0">
+          <span class="val" id="vTBa">0%</span></div>
+        <div class="row"><label>箱の角丸</label>
+          <input type="range" id="tBoxR" min="0" max="40" step="1" value="16">
+          <span class="val" id="vTBr">16</span></div>
+        <div class="row"><label>箱の枠</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
+        <div class="row"><label>枠の太さ</label>
+          <input type="range" id="tBoxLW" min="0" max="10" step="0.5" value="0">
+          <span class="val" id="vTBw">0</span></div>
+        <p class="hint">編集モードでは盤面の上を<b>ドラッグして動かせます</b>。</p>
       </div>
 
       <div class="sect" id="selSect">
@@ -1138,6 +1198,9 @@ const DEF=()=>({
   style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fSize:1,icSize:1,fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,editStep:1,fxBurst:true,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
+  title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,
+    color:"#FFFFFF",edge:5,edgeColor:"#FF57A0",glow:"soft",glowColor:"#FF57A0",
+    box:"#3B2A38",boxA:0,boxR:16,boxLine:"#FFFFFF",boxLW:0},
   img:{reveal:null,revealName:"サンプル画像",revealKind:"image",revealThumb:null,cover:null,coverName:"",coverKind:"image",coverThumb:null},
   vidSound:false,vidRestart:true,
   ar:4/3
@@ -1629,7 +1692,7 @@ function layout(){
   if(h*grow>ah){h=ah/grow;w=h*ar}
   BW=Math.round(w);BH=Math.round(h);
   b.style.width=BW+"px";b.style.height=BH+"px";
-  renderFrame();
+  renderFrame();renderTitle();
   b.style.backgroundImage=(S.img.reveal&&S.img.revealKind!=="video")?`url(${S.img.reveal})`:"none";
 }
 
@@ -1875,7 +1938,7 @@ function paintStats(){
 }
 let cmpTimers=[],cmpDone=false;
 function checkComplete(){
-  renderFrame();
+  renderFrame();renderTitle();
   const cv=counted();
   if(!cv.length)return;
   const done=cv.every(p=>p.open);
@@ -1999,6 +2062,50 @@ function frameSVG(kind,col,H,k){
       g+=`<circle cx="${q[0]}" cy="${q[1]}" r="${M*(i%2?.18:.30)}" fill="${i%2?"#ffffff":col}"/>`});
   }
   return{w:W,h:Hh,body:g,M};
+}
+/* ============ タイトル ============ */
+const TFONTS=[
+  {n:"まる",f:'"M PLUS Rounded 1c",sans-serif',w:800},
+  {n:"太",  f:'"Dela Gothic One",sans-serif',w:400},
+  {n:"ポップ",f:'"RocknRoll One",sans-serif',w:400},
+  {n:"手書",f:'"Yusei Magic",sans-serif',w:400},
+  {n:"角",  f:'"Zen Kaku Gothic New",sans-serif',w:900}
+];
+function renderTitle(){
+  const t=S.title||{},e=$("ttl"),sp=$("ttlTx");
+  if(!e)return;
+  if(!t.on||!BW){e.classList.remove("on");return}
+  e.classList.add("on");
+  sp.textContent=t.text||"";
+  const f=TFONTS[t.font||0]||TFONTS[0];
+  const px=BW*0.075*(t.size==null?1:t.size);
+  e.style.left=((t.x==null?.5:t.x)*100)+"%";
+  e.style.top=((t.y==null?.16:t.y)*100)+"%";
+  e.style.fontFamily=f.f;
+  e.style.fontWeight=f.w;
+  e.style.fontSize=px.toFixed(1)+"px";
+  e.style.color=t.color||"#fff";
+  const ed=(t.edge==null?5:t.edge)*px/100;
+  sp.style.webkitTextStroke=ed>0?ed.toFixed(2)+"px "+(t.edgeColor||"#000"):"";
+  sp.style.paintOrder="stroke";
+  const a=t.boxA==null?0:t.boxA;
+  sp.style.background=a>0?hexA(t.box||"#000000",a):"transparent";
+  sp.style.borderRadius=((t.boxR==null?16:t.boxR)*px/100).toFixed(1)+"px";
+  const lw=(t.boxLW||0)*px/100;
+  sp.style.border=lw>0?lw.toFixed(2)+"px solid "+(t.boxLine||"#fff"):"0";
+  e.style.setProperty("--tg",t.glowColor||"#FF57A0");
+  e.className="on"+(t.glow&&t.glow!=="none"?" g-"+t.glow:"");
+}
+function hexA(hex,a){
+  const m=/^#?([0-9a-f]{6})$/i.exec(hex||"");
+  if(!m)return"rgba(0,0,0,"+a+")";
+  const n=parseInt(m[1],16);
+  return"rgba("+(n>>16&255)+","+(n>>8&255)+","+(n&255)+","+a+")";
+}
+function drawTitleFonts(){
+  $("tFonts").innerHTML=TFONTS.map((f,i)=>
+    `<button class="fnt" data-f="${i}" aria-pressed="${(S.title||{}).font===i}"
+      style="font-family:${f.f.replace(/"/g,"&quot;")};font-weight:${f.w}">あ</button>`).join("");
 }
 function renderFrame(){
   const f=$("frame"),fr=S.frame||{kind:"none"};
@@ -2645,6 +2752,56 @@ $("vidSound").onchange=()=>{S.vidSound=$("vidSound").checked;$("rvid").muted=!S.
   if(S.vidSound)$("rvid").play().catch(()=>{});save()};
 $("vidRestart").onchange=()=>{S.vidRestart=$("vidRestart").checked;save()};
 $("fxBurst").onchange=()=>{S.fxBurst=$("fxBurst").checked;save()};
+function tSet(k,v,quiet){
+  if(!S.title)S.title={};
+  S.title[k]=v;renderTitle();save();
+  if(!quiet)return;
+}
+$("tOn").onchange=()=>{tSet("on",$("tOn").checked);};
+$("tText").addEventListener("input",()=>tSet("text",$("tText").value));
+$("tFonts").addEventListener("click",e=>{
+  const b=e.target.closest(".fnt");if(!b)return;
+  tSet("font",+b.dataset.f);drawTitleFonts();
+});
+[["tSize","size","vTSz",v=>v.toFixed(1)],
+ ["tX","x","vTX2",v=>Math.round(v*100)+"%"],
+ ["tY","y","vTY2",v=>Math.round(v*100)+"%"],
+ ["tEdge","edge","vTEd",v=>v],
+ ["tBoxA","boxA","vTBa",v=>Math.round(v*100)+"%"],
+ ["tBoxR","boxR","vTBr",v=>v],
+ ["tBoxLW","boxLW","vTBw",v=>v]].forEach(([id,key,lab,fmt])=>{
+  $(id).addEventListener("input",()=>{
+    const v=+$(id).value;$(lab).textContent=fmt(v);tSet(key,v);
+  });
+});
+[["tColor","color"],["tEdgeColor","edgeColor"],["tGlowColor","glowColor"],
+ ["tBox","box"],["tBoxLine","boxLine"]].forEach(([id,key])=>{
+  $(id).addEventListener("input",()=>tSet(key,$(id).value));
+});
+$("tGlow").onchange=()=>tSet("glow",$("tGlow").value);
+/* 盤面の上をドラッグして動かす */
+(function(){
+  const e=$("ttl");let dg=null;
+  e.addEventListener("pointerdown",ev=>{
+    if(!isEdit())return;
+    ev.preventDefault();ev.stopPropagation();
+    const b=$("board").getBoundingClientRect();
+    dg={x:ev.clientX,y:ev.clientY,x0:S.title.x==null?.5:S.title.x,y0:S.title.y==null?.16:S.title.y,w:b.width,h:b.height};
+    try{e.setPointerCapture(ev.pointerId)}catch(err){}
+  });
+  e.addEventListener("pointermove",ev=>{
+    if(!dg)return;
+    S.title.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.w,0,1);
+    S.title.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.h,0,1);
+    renderTitle();
+  });
+  e.addEventListener("pointerup",()=>{
+    if(!dg)return;dg=null;
+    $("tX").value=S.title.x;$("vTX2").textContent=Math.round(S.title.x*100)+"%";
+    $("tY").value=S.title.y;$("vTY2").textContent=Math.round(S.title.y*100)+"%";
+    save();
+  });
+})();
 $("frames").addEventListener("click",e=>{
   const b=e.target.closest(".frm");if(!b)return;
   if(!S.frame)S.frame={};
@@ -2842,6 +2999,30 @@ $("btnPng").onclick=()=>{
     x.restore();
     S.pieces.filter(p=>!p.cut).forEach(drawPiece);
   }else S.pieces.forEach(drawPiece);
+  const t=S.title||{};
+  if(t.on&&(t.text||"").trim()){
+    const f=TFONTS[t.font||0]||TFONTS[0];
+    const fs=VW*0.075*(t.size==null?1:t.size);
+    const lines=String(t.text).split("\n");
+    x.font=`${f.w} ${fs}px ${f.f}`;
+    x.textAlign="center";x.textBaseline="middle";
+    const lh=fs*1.25,padX=fs*.62,padY=fs*.28;
+    let wMax=0;lines.forEach(l=>wMax=Math.max(wMax,x.measureText(l).width));
+    const bw=wMax+padX*2,bh=lines.length*lh+padY*2;
+    const cx=(t.x==null?.5:t.x)*VW,cy=(t.y==null?.16:t.y)*H;
+    const bx=cx-bw/2,by=cy-bh/2,rr2=(t.boxR==null?16:t.boxR)*fs/100;
+    if((t.boxA||0)>0||((t.boxLW||0)>0)){
+      const pth=new Path2D(rr(bx,by,bw,bh,Math.min(rr2,bh/2,bw/2)));
+      if((t.boxA||0)>0){x.fillStyle=hexA(t.box||"#000",t.boxA);x.fill(pth)}
+      if((t.boxLW||0)>0){x.strokeStyle=t.boxLine||"#fff";x.lineWidth=(t.boxLW||0)*fs/100;x.stroke(pth)}
+    }
+    const ed=(t.edge==null?5:t.edge)*fs/100;
+    lines.forEach((ln,i)=>{
+      const yy=by+padY+lh*(i+.5);
+      if(ed>0){x.lineJoin="round";x.strokeStyle=t.edgeColor||"#000";x.lineWidth=ed*2;x.strokeText(ln,cx,yy)}
+      x.fillStyle=t.color||"#fff";x.fillText(ln,cx,yy);
+    });
+  }
   c.toBlob(b=>{if(b)saveFile("panel-board.png",b)},"image/png");
 };
 
@@ -2862,7 +3043,7 @@ document.addEventListener("keydown",e=>{
 
 /* ---------- collapsible sections & the file menu ---------- */
 function foldSections(){
-  const open0=[1,1,1,1,0,0,0];
+  const open0=[1,1,1,0,1,0,0,0];
   document.querySelectorAll(".rail .sect").forEach((sec,i)=>{
     const h=sec.querySelector("h3");
     if(!h||sec.dataset.fold)return;
@@ -2873,11 +3054,12 @@ function foldSections(){
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2 4 4"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><path d="M17.2 13.6c1.6 1.4 3.8 3 3.8 4.8a2.6 2.6 0 0 1-5.2.3 2.6 2.6 0 0 1-5.2-.3c0-1.8 2.2-3.4 3.8-4.8"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><rect x="6" y="7.5" width="12" height="9" rx="1.5"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="3"/><path d="M13 13l8 3-3.4 1.4L16 21z" fill="currentColor" stroke="none"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h11M4 17h7"/><circle cx="19" cy="15.5" r="2.5"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.5-1.8-.4-1.2.5-2.2 1.8-2.2H18a3 3 0 0 0 3-3c0-5-4-11-9-11z"/><circle cx="8.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10.5" r="1.2" fill="currentColor"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.3"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>'];
-    const TINTS=["#FF57A0","#7C6BFF","#FF8A6B","#25CBAA","#FFB43D","#49B6F5","#B06BFF"];
+    const TINTS=["#FF57A0","#7C6BFF","#FF8A6B","#F0509B","#25CBAA","#FFB43D","#49B6F5","#B06BFF"];
     const dot=document.createElement("span");dot.className="dot";
     dot.innerHTML=ICONS[i]||"";
     dot.style.color=TINTS[i]||"#FF57A0";
@@ -2910,6 +3092,19 @@ function syncUI(){
   $("bgSel").value=S.bg;applyBg();
   $("pColor").value=st.pColor;$("pOpa").value=st.pOpa;$("bColor").value=st.bColor;
   $("bWidth").value=st.bWidth;$("fColor").value=st.fColor;$("fWeight").value=st.fWeight;$("fSize").value=st.fSize;
+  const t=S.title||{};
+  $("tOn").checked=!!t.on;$("tText").value=t.text||"";
+  $("tSize").value=t.size==null?1:t.size;$("vTSz").textContent=Number(t.size==null?1:t.size).toFixed(1);
+  $("tX").value=t.x==null?.5:t.x;$("vTX2").textContent=Math.round((t.x==null?.5:t.x)*100)+"%";
+  $("tY").value=t.y==null?.16:t.y;$("vTY2").textContent=Math.round((t.y==null?.16:t.y)*100)+"%";
+  $("tColor").value=t.color||"#FFFFFF";$("tEdgeColor").value=t.edgeColor||"#FF57A0";
+  $("tEdge").value=t.edge==null?5:t.edge;$("vTEd").textContent=t.edge==null?5:t.edge;
+  $("tGlow").value=t.glow||"soft";$("tGlowColor").value=t.glowColor||"#FF57A0";
+  $("tBox").value=t.box||"#3B2A38";$("tBoxA").value=t.boxA||0;
+  $("vTBa").textContent=Math.round((t.boxA||0)*100)+"%";
+  $("tBoxR").value=t.boxR==null?16:t.boxR;$("vTBr").textContent=t.boxR==null?16:t.boxR;
+  $("tBoxLine").value=t.boxLine||"#FFFFFF";$("tBoxLW").value=t.boxLW||0;
+  $("vTBw").textContent=t.boxLW||0;
   const fr=S.frame||{};
   $("frColor").value=fr.color||"#FF57A0";
   $("frGlow").value=fr.glow||"soft";
@@ -2935,7 +3130,7 @@ function seed(){
 }
 if(!load())seed();
 warmIcons();
-drawFrames();
+drawFrames();drawTitleFonts();
 enhanceAll(document);
 foldSections();
 syncUI();applyImages();drawPatterns();patOpts();render();
