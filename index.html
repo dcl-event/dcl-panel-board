@@ -93,8 +93,9 @@ button{cursor:pointer}
 #ttl.g-pulse span{animation:ttlGlow 2.2s ease-in-out infinite}
 @keyframes ttlGlow{0%,100%{filter:drop-shadow(0 0 2px var(--tg,#FF57A0))}
   50%{filter:drop-shadow(0 0 20px var(--tg,#FF57A0))}}
-.mode-edit #ttl.on::after{content:"";position:absolute;inset:-6px;border:1.5px dashed rgba(255,87,160,.75);
-  border-radius:10px;pointer-events:none}
+.mode-edit #ttl.on:hover::after,.mode-edit #ttl.on.dragging::after{
+  content:"";position:absolute;inset:-7px;border:1.5px dashed rgba(255,87,160,.85);
+  border-radius:12px;pointer-events:none}
 .fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
 .fnt{border:1.5px solid var(--edge);background:#fff;border-radius:11px;padding:7px 2px;
   font-size:17px;line-height:1;color:var(--plum);transition:.15s}
@@ -749,6 +750,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
             <button class="tbtn" data-be="round">まる</button>
             <button class="tbtn" data-be="puffy">もこもこ</button>
             <button class="tbtn" data-be="beads">ビーズ</button>
+            <button class="tbtn" data-be="zig">ギザギザ</button>
+            <button class="tbtn" data-be="wave">なみなみ</button>
+            <button class="tbtn" data-be="heart">ハート</button>
+            <button class="tbtn" data-be="star">きらきら</button>
+            <button class="tbtn" data-be="stitch">ステッチ</button>
+            <button class="tbtn" data-be="bubble">ふきだし</button>
           </div></div>
         <div class="row"><label>枠の色</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
         <div class="row"><label>枠の太さ</label>
@@ -2142,18 +2149,60 @@ function renderTitle(){
       sp.style.border=lw.toFixed(2)+"px solid "+bc;
       sp.style.borderRadius="999px";
     }
-    else{ // puffy / beads は SVG で描く
+    else{ // 形のある枠は SVG で描く
       sp.style.border="0";
       const r0=sp.getBoundingClientRect();
       if(r0.width>2){
         const w=r0.width,h=r0.height,m=lw*2.2;
-        const pts=ringPts(m*.5,m*.5,w-m,h-m,
-          Math.max(8,Math.min(60,Math.round((2*(w+h))/(m*(be==="puffy"?1.55:2.2))))));
-        const body=pts.map((q,i)=>{
-          const rr2=be==="puffy"?m*.9:(i%2?m*.42:m*.72);
-          return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${rr2.toFixed(1)}" `+
-                 `fill="${be==="puffy"?bc:(i%2?"#ffffff":bc)}"/>`;
-        }).join("");
+        const inR=Math.max(0,rad);
+        let body="";
+        const per=2*((w-m)+(h-m));
+        const count=k=>Math.max(8,Math.min(72,Math.round(per/(m*k))));
+        if(be==="puffy"||be==="beads"){
+          const pts=ringPts(m*.5,m*.5,w-m,h-m,count(be==="puffy"?1.55:2.2));
+          body=pts.map((q,i)=>{
+            const rr2=be==="puffy"?m*.9:(i%2?m*.42:m*.72);
+            return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${rr2.toFixed(1)}" fill="${be==="puffy"?bc:(i%2?"#ffffff":bc)}"/>`;
+          }).join("");
+        }else if(be==="heart"||be==="star"){
+          const pts=ringPts(m*.5,m*.5,w-m,h-m,count(2.6));
+          body=pts.map((q,i)=>{
+            const R=m*(i%2?.55:.85);
+            const col=i%2?"#ffffff":bc;
+            const d=be==="heart"?poly(shapePts("heart",q[0],q[1],R)):starPath(q[0],q[1],R);
+            return `<path d="${d}" fill="${col}"/>`;
+          }).join("");
+        }else if(be==="zig"){
+          const pts=ringPts(m*.55,m*.55,w-m*1.1,h-m*1.1,count(1.15));
+          const cx=w/2,cy=h/2;
+          const out=pts.map((q,i)=>{
+            const dx=q[0]-cx,dy=q[1]-cy,L=Math.hypot(dx,dy)||1;
+            const k2=i%2?m*.85:0;
+            return [(q[0]+dx/L*k2).toFixed(1),(q[1]+dy/L*k2).toFixed(1)];
+          });
+          body=`<path d="M${out.map(q=>q[0]+","+q[1]).join("L")}Z" fill="${bc}"/>`;
+        }else if(be==="wave"){
+          const pts=ringPts(m*.6,m*.6,w-m*1.2,h-m*1.2,count(.55));
+          const cx=w/2,cy=h/2;
+          const out=pts.map((q,i)=>{
+            const dx=q[0]-cx,dy=q[1]-cy,L=Math.hypot(dx,dy)||1;
+            const k2=Math.sin(i/2.2)*m*.5;
+            return [(q[0]+dx/L*k2).toFixed(1),(q[1]+dy/L*k2).toFixed(1)];
+          });
+          body=`<path d="M${out.map(q=>q[0]+","+q[1]).join("L")}Z" fill="none" stroke="${bc}" stroke-width="${(m*.42).toFixed(1)}" stroke-linejoin="round"/>`;
+        }else if(be==="stitch"){
+          body=`<path d="${rr(m*.5,m*.5,w-m,h-m,Math.max(2,inR))}" fill="none" stroke="${bc}"
+                 stroke-width="${(m*.34).toFixed(1)}"/>`+
+               `<path d="${rr(m*1.35,m*1.35,w-m*2.7,h-m*2.7,Math.max(2,inR*.6))}" fill="none" stroke="${bc}"
+                 stroke-width="${(m*.26).toFixed(1)}" stroke-dasharray="${(m*.7).toFixed(1)} ${(m*.55).toFixed(1)}"
+                 stroke-linecap="round" opacity=".9"/>`;
+        }else if(be==="bubble"){
+          const tw=Math.min(w*.22,m*3.2),tx=w*.5;
+          body=`<path d="${rr(m*.5,m*.5,w-m,h-m,Math.max(2,inR))}" fill="none" stroke="${bc}"
+                 stroke-width="${(m*.4).toFixed(1)}"/>`+
+               `<path d="M${(tx-tw/2).toFixed(1)},${(h-m*.5).toFixed(1)} L${tx.toFixed(1)},${(h+m*2.1).toFixed(1)} L${(tx+tw/2).toFixed(1)},${(h-m*.5).toFixed(1)}Z"
+                 fill="${hexA(t.box||"#000",Math.max(a,.9))}" stroke="${bc}" stroke-width="${(m*.4).toFixed(1)}" stroke-linejoin="round"/>`;
+        }
         deco.setAttribute("viewBox",`0 0 ${w.toFixed(0)} ${h.toFixed(0)}`);
         deco.innerHTML=body;
         deco.classList.add("on");
@@ -2899,6 +2948,7 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
     ev.preventDefault();ev.stopPropagation();
     const b=$("board").getBoundingClientRect();
     dg={x:ev.clientX,y:ev.clientY,x0:S.title.x==null?.5:S.title.x,y0:S.title.y==null?.16:S.title.y,w:b.width,h:b.height};
+    e.classList.add("dragging");
     try{e.setPointerCapture(ev.pointerId)}catch(err){}
   });
   e.addEventListener("pointermove",ev=>{
@@ -2908,6 +2958,7 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
     renderTitle();
   });
   e.addEventListener("pointerup",()=>{
+    e.classList.remove("dragging");
     if(!dg)return;dg=null;
     $("tX").value=S.title.x;$("vTX2").textContent=Math.round(S.title.x*100)+"%";
     $("tY").value=S.title.y;$("vTY2").textContent=Math.round(S.title.y*100)+"%";
