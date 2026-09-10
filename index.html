@@ -140,6 +140,10 @@ button{cursor:pointer}
 .piece.is-open .face{transform:scale(.84) rotate(-4deg)}
 .mode-edit .piece.is-open{opacity:.2;pointer-events:auto}
 .mode-edit .piece.is-open .face{transform:none}
+.piece.lit{transform-box:fill-box;transform-origin:center}
+.piece.lit .face{filter:drop-shadow(0 0 9px var(--lc,#FFD34D))}
+.piece.lit.just{animation:litpop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes litpop{0%{transform:scale(1)}42%{transform:scale(1.14)}100%{transform:scale(1)}}
 .piece.hit .face{animation:hit .24s ease}
 @keyframes hit{45%{transform:scale(.955)}100%{transform:scale(1)}}
 .piece.pop .face{transform:scale(1.07);filter:brightness(1.65)}
@@ -818,6 +822,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         </div>
         <div class="row"><label>文字サイズ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
         <div class="row"><label>ギフト画像</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
+        <div class="row"><label>点灯の色</label><input type="color" id="litColor" value="#FFD34D">
+          <span class="hint" style="margin:0;flex:1">47都道府県で埋まったマスの色</span></div>
         <div class="row"><label>文字のフチ</label>
           <label class="toggle"><input type="checkbox" id="fEdge" checked>つける</label>
         </div>
@@ -878,7 +884,8 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 
 /* ============ geometry helpers ============ */
 const VW=1000;                        // board coordinate width
-const vh=()=>Math.round(VW/(S.ar||4/3));
+const boardAR=()=>S.pattern==="japan"?11/14:(S.ar||4/3);
+const vh=()=>Math.round(VW/boardAR());
 const poly=p=>"M"+p.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join("L")+"Z";
 function shoelace(p){let a=0;for(let i=0;i<p.length;i++){const q=p[i],r=p[(i+1)%p.length];a+=q[0]*r[1]-r[0]*q[1]}return Math.abs(a/2)}
 function inPoly(x,y,p){
@@ -981,10 +988,21 @@ const RAW={
     for(let i=0;i<N;i++){const t=i/N*Math.PI*2;
       p.push([Math.sin(t)*Math.pow(Math.sin(t/2),2),-Math.cos(t)]);}
     return p},
-  crown:()=>[[-.86,.62],[.86,.62],[1,-.30],[.50,.05],[0,-.62],[-.50,.05],[-1,-.30]]
+  crown:()=>[[-.86,.62],[.86,.62],[1,-.30],[.50,.05],[0,-.62],[-.50,.05],[-1,-.30]],
+  /* 登竜門用の龍の頭（右向き） */
+  /* 頭・鼻先・角・あごひげ・たてがみを合体させて輪郭を取る */
+  dragon:()=>unionPolar([-.12,0],[
+    {c:[-.15,-.05,.52]},
+    {p:[[.10,-.30],[1.00,-.12],[1.00,.10],[.10,.34]]},
+    {p:[[-.30,-.40],[-.34,-1.00],[-.06,-.42]]},
+    {p:[[-.56,-.34],[-.82,-.88],[-.34,-.38]]},
+    {p:[[-.34,.28],[-.08,.98],[.14,.28]]},
+    {p:[[-.50,-.32],[-1.00,-.06],[-.92,.42],[-.36,.30]]},
+    {p:[[.55,.05],[1.02,.16],[.55,.30]]}
+  ],220)
 };
 const SHAPE_LABEL={heart:"ハート",star:"星",circle:"丸",rhombus:"ひし形",hex:"六角",flower:"花",
-  sakura:"桜",leaf:"葉っぱ",cloud:"雲",bolt:"雷",drop:"雫",crown:"王冠"};
+  sakura:"桜",leaf:"葉っぱ",cloud:"雲",bolt:"雷",drop:"雫",crown:"王冠",dragon:"龍"};
 function shapePts(name,cx,cy,rad,deg){
   const raw=(RAW[name]||RAW.heart)();
   const b=bbox(raw),mx=(b.x0+b.x1)/2,my=(b.y0+b.y1)/2;
@@ -1123,6 +1141,18 @@ function genPieces(pat,W,H,o){
     return{pieces:P,cut};
   }
 
+  if(pat==="japan"){
+    const cols=11,rows=14;
+    const sz=Math.min(W/(cols+.5),H/(rows+.5));
+    const ox=(W-cols*sz)/2,oy=(H-rows*sz)/2,gap=sz*.12;
+    JP.forEach(t=>{
+      const x=ox+t[1]*sz+gap/2,y=oy+t[2]*sz+gap/2,w=sz-gap,h=sz-gap;
+      push("jp"+t[0],rr(x,y,w,h,sz*.24),x+w/2,y+h/2,Math.sqrt(w*h)*.98,
+        {dl:t[0],box:{x,y,w,h}});
+    });
+    return{pieces:P,cut};
+  }
+
   if(pat==="hex"){
     // squashed just enough that the hexes tile the board exactly — no edge slivers
     const cols=o.cols,dx=W/cols,hw=dx/2;
@@ -1221,6 +1251,20 @@ function genPieces(pat,W,H,o){
   return{pieces:P,cut};
 }
 
+/* 47都道府県のタイル配置（x=西→東, y=北→南） */
+const JP=[
+  ["北海道",10,0],["青森",10,1],["秋田",9,2],["岩手",10,2],["山形",9,3],["宮城",10,3],
+  ["新潟",9,4],["福島",10,4],
+  ["石川",6,5],["富山",7,5],["群馬",8,5],["栃木",9,5],["茨城",10,5],
+  ["福井",5,6],["岐阜",6,6],["長野",7,6],["埼玉",8,6],["東京",9,6],["千葉",10,6],
+  ["鳥取",3,7],["兵庫",4,7],["京都",5,7],["滋賀",6,7],["愛知",7,7],["山梨",8,7],["神奈川",9,7],
+  ["島根",3,8],["岡山",4,8],["大阪",5,8],["奈良",6,8],["三重",7,8],["静岡",8,8],
+  ["山口",2,9],["広島",3,9],["香川",4,9],["和歌山",5,9],
+  ["福岡",2,10],["愛媛",3,10],["徳島",4,10],
+  ["佐賀",1,11],["大分",2,11],["高知",3,11],
+  ["長崎",1,12],["熊本",2,12],["宮崎",3,12],
+  ["鹿児島",2,13],["沖縄",0,13]
+];
 const PATTERNS=[
   {id:"grid",   name:"グリッド"},
   {id:"center", name:"中央シェイプ"},
@@ -1228,7 +1272,8 @@ const PATTERNS=[
   {id:"hex",    name:"ハニカム"},
   {id:"radial", name:"放射"},
   {id:"rings",  name:"同心円"},
-  {id:"diamond",name:"ダイヤ"}
+  {id:"diamond",name:"ダイヤ"},
+  {id:"japan",  name:"47都道府県"}
 ];
 
 /* ============ state ============ */
@@ -1236,7 +1281,7 @@ const DEF=()=>({
   pattern:"center",
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
-  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
+  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,editStep:1,fxBurst:true,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
   title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
@@ -1284,7 +1329,8 @@ function rebuild(){
   const old={};S.pieces.forEach(p=>old[p.k]=p);
   const {pieces,cut}=genPieces(S.pattern,VW,vh(),S.opt);
   pieces.forEach((p,i)=>{
-    p.need=1000;p.got=0;p.open=false;p.label="1000";p.auto=true;
+    p.need=1000;p.got=0;p.open=false;
+    p.label=p.dl||"1000";p.auto=!p.dl;
     p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.tx=0;p.ty=0;p.tS=1;
     applyTo(p,old[p.k]);
     if(!p.fx)p.fx="none";
@@ -1727,7 +1773,7 @@ function layout(){
   const st=$("stage"),b=$("board");
   const aw=st.clientWidth-44,ah=st.clientHeight-44;
   if(aw<=0||ah<=0)return;
-  const ar=S.ar||4/3;
+  const ar=boardAR();
   const fr=S.frame||{};
   const grow=(!fr.kind||fr.kind==="none")?1:1+2*FRAME_M*(fr.size==null?1:fr.size)/VW;
   let w=aw/grow,h=w/ar;
@@ -1765,13 +1811,16 @@ function layout(){
       }
     }
   }
-  b.style.backgroundImage=(S.img.reveal&&S.img.revealKind!=="video")?`url(${S.img.reveal})`:"none";
+  b.style.backgroundImage=(S.pattern!=="japan"&&S.img.reveal&&S.img.revealKind!=="video")
+    ?`url(${S.img.reveal})`:"none";
+  $("rvid").hidden=S.pattern==="japan"?true:(S.img.revealKind!=="video"||!$("rvid").getAttribute("src"));
 }
 
 /* ============ render ============ */
 function el(n,a){const e=document.createElementNS(SVGNS,n);for(const k in a)if(a[k]!=null)e.setAttribute(k,a[k]);return e}
 function dBox(p){
   if(p._b)return p._b;
+  if(p.box)return p._b=p.box;
   const n=(p.d.match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(let i=0;i+1<n.length;i+=2){
@@ -1868,6 +1917,7 @@ function render(keepInspector){
   svg.appendChild(defs);
 
   const fitList=[];
+  const litMode=S.pattern==="japan",litC=st.litColor||"#FFD34D";
   const baseFill=S.img.coverKind==="video"?"none":(S.img.cover?"url(#cov)":st.pColor);
   const gCut=S.cut?el("g",{mask:"url(#cutmask)"}):null;
   const gTop=el("g");
@@ -1876,10 +1926,13 @@ function render(keepInspector){
 
   S.pieces.forEach((p,i)=>{
     const shown=p.open&&!(p._hideUntil&&performance.now()<p._hideUntil);
-    const g=el("g",{class:"piece"+(shown?" is-open":"")+(sel.has(p)?" sel":"")+(p.glow?" glow":"")+(p.follow?" follower":""),"data-i":i});
+    const lit=litMode&&p.open;
+    const g=el("g",{class:"piece"+((shown&&!litMode)?" is-open":"")+(lit?" lit":"")+(sel.has(p)?" sel":"")+(p.glow?" glow":"")+(p.follow?" follower":""),"data-i":i});
     if(p.glow)g.setAttribute("style","--gc:"+fxOf(p));
-    const path=el("path",{d:p.d,fill:p.pc||baseFill,"fill-opacity":st.pOpa,
-      stroke:p.bc||st.bColor,"stroke-width":st.bWidth*(p.bwm||1),"stroke-linejoin":"round",class:"face"});
+    const path=el("path",{d:p.d,fill:lit?litC:(p.pc||baseFill),"fill-opacity":st.pOpa,
+      stroke:lit?litC:(p.bc||st.bColor),"stroke-width":st.bWidth*(p.bwm||1),
+      "stroke-linejoin":"round",class:"face"});
+    if(lit)g.setAttribute("style","--lc:"+litC);
     if(p.clip)path.setAttribute("clip-path","url(#pc"+i+")");
     g.appendChild(path);
     if(!p.open&&p.fx&&p.fx!=="none"){
@@ -2349,6 +2402,7 @@ const SHAPE_COLORS={
   star:   ["#FFD34D","#FFD34D","#FFC01F","#FFE99A","#FFAE00"],
   hex:    ["#FFC53D","#FFB000","#FFE08A","#E09400"],
   drop:   ["#4FC3F7","#4FC3F7","#8ED8FF","#29A8E0","#CDEEFF"],
+  dragon: ["#FFD34D","#FFD34D","#7BE38B","#2FA36B","#FFF0AE"],
   rhombus:["#5AC8FA","#8FE1FF","#2BB3E8","#C9F0FF"],
   cloud:  ["#FFFFFF","#FFFFFF","#EAF4FF","#CFE6FF","#B7D8F5"],
   circle: ["#FF7FB8","#FFD34D","#67D9C0","#9E8CFF","#FFB7D5"]
@@ -2856,11 +2910,15 @@ function hitPiece(p,dir){
     g.classList.remove("hit");g.getBoundingClientRect();g.classList.add("hit");
     setTimeout(()=>g.classList.remove("hit"),260);
     if(!was&&p.open){
-      const wait=S.fxBurst===false?70:FILL_MS;
-      if(S.fxBurst!==false){p._hideUntil=performance.now()+FILL_MS;playBurst()}
+      const litMode=S.pattern==="japan";
+      const wait=(litMode||S.fxBurst===false)?70:FILL_MS;
+      if(!litMode&&S.fxBurst!==false){p._hideUntil=performance.now()+FILL_MS;playBurst()}
       g.classList.add("pop");
-      setTimeout(()=>{g.classList.remove("pop");g.classList.add("is-open");
-        p._t0=performance.now();render(true)},wait);
+      setTimeout(()=>{g.classList.remove("pop");
+        if(!litMode)g.classList.add("is-open");
+        p._t0=performance.now();render(true);
+        if(litMode){const q=p._g;if(q){q.classList.add("just");setTimeout(()=>q.classList.remove("just"),600)}}
+      },wait);
     }
     else g.classList.toggle("is-open",p.open);
     const ct=g.querySelector(".ct");
@@ -2924,7 +2982,7 @@ $("btnMinus").onclick=()=>{if(cur)hitPiece(cur,-1)};
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
 
 [["pColor","pColor","v"],["pOpa","pOpa","n"],["bColor","bColor","v"],["bWidth","bWidth","n"],
- ["fColor","fColor","v"],["fWeight","fWeight","v"],["fSize","fSize","n"],["icSize","icSize","n"],["fEdge","fEdge","c"],["fEdgeColor","fEdgeColor","v"],
+ ["fColor","fColor","v"],["fWeight","fWeight","v"],["fSize","fSize","n"],["icSize","icSize","n"],["litColor","litColor","v"],["fEdge","fEdge","c"],["fEdgeColor","fEdgeColor","v"],
  ["showCount","showCount","c"],["showNo","showNo","c"]].forEach(([id,key,kind])=>{
   $(id).addEventListener("input",()=>{
     const e=$(id);
@@ -3358,6 +3416,7 @@ function syncUI(){
   $("vFr").textContent=Number(fr.size==null?1:fr.size).toFixed(1);
   $("fxBurst").checked=S.fxBurst!==false;
   $("icSize").value=st.icSize==null?1:st.icSize;
+  $("litColor").value=st.litColor||"#FFD34D";
   drawPanelFonts();
   $("fEdge").checked=st.fEdge!==false;$("fEdgeColor").value=st.fEdgeColor||"#000000";
   repaintColors();
