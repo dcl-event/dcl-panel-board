@@ -85,7 +85,10 @@ button{cursor:pointer}
   transform:translate(-50%,-50%);white-space:pre-wrap;line-height:1.25;pointer-events:none}
 #ttl.on{display:block}
 .mode-edit #ttl.on{pointer-events:auto;cursor:move}
-#ttl span{display:inline-block;padding:.28em .62em}
+#ttl span{display:inline-block;padding:.32em .68em;position:relative;z-index:2}
+#ttlDeco{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;
+  pointer-events:none;z-index:1;display:none}
+#ttlDeco.on{display:block}
 #ttl.g-soft span{filter:drop-shadow(0 0 8px var(--tg,#FF57A0))}
 #ttl.g-pulse span{animation:ttlGlow 2.2s ease-in-out infinite}
 @keyframes ttlGlow{0%,100%{filter:drop-shadow(0 0 2px var(--tg,#FF57A0))}
@@ -608,7 +611,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
   <div class="main">
     <div class="stagewrap">
       <div class="stage" id="stage" data-bg="dark">
-        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="fxcv"></canvas></div>
+        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="fxcv"></canvas></div>
       </div>
       <div class="livebar">
         <div class="cursel" id="cursel">
@@ -700,16 +703,28 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <input type="range" id="tSize" min="0.2" max="2.5" step="0.02" value="1">
           <span class="val" id="vTSz">1.0</span></div>
         <div class="row"><label>よこ位置</label>
-          <input type="range" id="tX" min="0" max="1" step="0.005" value="0.5">
+          <input type="range" id="tX" min="-0.4" max="1.4" step="0.005" value="0.5">
           <span class="val" id="vTX2">50%</span></div>
         <div class="row"><label>たて位置</label>
-          <input type="range" id="tY" min="0" max="1" step="0.005" value="0.16">
+          <input type="range" id="tY" min="-0.4" max="1.4" step="0.005" value="0.16">
           <span class="val" id="vTY2">12%</span></div>
         <div class="row"><label>文字色</label><input type="color" id="tColor" value="#FFFFFF"></div>
-        <div class="row"><label>フチの色</label><input type="color" id="tEdgeColor" value="#FF57A0"></div>
-        <div class="row"><label>フチの太さ</label>
-          <input type="range" id="tEdge" min="0" max="14" step="0.5" value="5">
-          <span class="val" id="vTEd">5</span></div>
+        <div class="row"><label>ふち</label>
+          <div class="btnrow grow">
+            <button class="tbtn" data-ep="sticker">シール</button>
+            <button class="tbtn" data-ep="candy">キャンディ</button>
+            <button class="tbtn" data-ep="soft">ふんわり</button>
+            <button class="tbtn" data-ep="none">なし</button>
+          </div></div>
+        <div class="row"><label>外ふち色</label><input type="color" id="tEdgeColor" value="#FF57A0"></div>
+        <div class="row"><label>内ふち</label>
+          <label class="toggle"><input type="checkbox" id="tEdge2" checked>二重にする</label>
+          <input type="color" id="tEdge2Color" value="#FFFFFF" style="margin-left:auto"></div>
+        <div class="row"><label>ふちの太さ</label>
+          <input type="range" id="tEdge" min="0" max="20" step="0.5" value="7">
+          <span class="val" id="vTEd">7</span></div>
+        <div class="row"><label></label>
+          <label class="toggle"><input type="checkbox" id="tDrop" checked>下に影をつける</label></div>
         <div class="row"><label>光り方</label>
           <select id="tGlow" class="grow">
             <option value="none">なし</option>
@@ -724,10 +739,21 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="row"><label>箱の角丸</label>
           <input type="range" id="tBoxR" min="0" max="40" step="1" value="16">
           <span class="val" id="vTBr">16</span></div>
-        <div class="row"><label>箱の枠</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">箱の枠</label>
+          <div class="btnrow grow" style="flex-wrap:wrap" id="tBoxEdges">
+            <button class="tbtn" data-be="none">なし</button>
+            <button class="tbtn" data-be="solid">ふつう</button>
+            <button class="tbtn" data-be="double">二重</button>
+            <button class="tbtn" data-be="dot">点々</button>
+            <button class="tbtn" data-be="dash">破線</button>
+            <button class="tbtn" data-be="round">まる</button>
+            <button class="tbtn" data-be="puffy">もこもこ</button>
+            <button class="tbtn" data-be="beads">ビーズ</button>
+          </div></div>
+        <div class="row"><label>枠の色</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
         <div class="row"><label>枠の太さ</label>
-          <input type="range" id="tBoxLW" min="0" max="10" step="0.5" value="0">
-          <span class="val" id="vTBw">0</span></div>
+          <input type="range" id="tBoxLW" min="0" max="14" step="0.5" value="4">
+          <span class="val" id="vTBw">4</span></div>
         <p class="hint">編集モードでは盤面の上を<b>ドラッグして動かせます</b>。</p>
       </div>
 
@@ -1198,8 +1224,9 @@ const DEF=()=>({
   style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fSize:1,icSize:1,fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,editStep:1,fxBurst:true,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
-  title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,
-    color:"#FFFFFF",edge:5,edgeColor:"#FF57A0",glow:"soft",glowColor:"#FF57A0",
+  title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
+    color:"#FFFFFF",edge:7,edgeColor:"#FF57A0",edge2:true,edge2Color:"#FFFFFF",
+    drop:true,glow:"soft",glowColor:"#FF57A0",
     box:"#3B2A38",boxA:0,boxR:16,boxLine:"#FFFFFF",boxLW:0},
   img:{reveal:null,revealName:"サンプル画像",revealKind:"image",revealThumb:null,cover:null,coverName:"",coverKind:"image",coverThumb:null},
   vidSound:false,vidRestart:true,
@@ -2085,22 +2112,83 @@ function renderTitle(){
   e.style.fontWeight=f.w;
   e.style.fontSize=px.toFixed(1)+"px";
   e.style.color=t.color||"#fff";
-  const ed=(t.edge==null?5:t.edge)*px/100;
-  sp.style.webkitTextStroke=ed>0?ed.toFixed(2)+"px "+(t.edgeColor||"#000"):"";
-  sp.style.paintOrder="stroke";
+  const ed=(t.edge==null?7:t.edge)*px/100;
+  sp.style.webkitTextStroke="";
+  const parts=[];
+  if(ed>0){
+    if(t.edge2!==false)parts.push(ring(ed*0.52,t.edge2Color||"#FFFFFF"));
+    parts.push(ring(ed,t.edgeColor||"#FF57A0"));
+  }
+  if(t.drop!==false)parts.push(`0 ${(ed*0.75+px*0.02).toFixed(1)}px ${(ed*1.1+px*0.03).toFixed(1)}px rgba(0,0,0,.32)`);
+  sp.style.textShadow=parts.join(",");
   const a=t.boxA==null?0:t.boxA;
   sp.style.background=a>0?hexA(t.box||"#000000",a):"transparent";
-  sp.style.borderRadius=((t.boxR==null?16:t.boxR)*px/100).toFixed(1)+"px";
-  const lw=(t.boxLW||0)*px/100;
-  sp.style.border=lw>0?lw.toFixed(2)+"px solid "+(t.boxLine||"#fff"):"0";
+  const rad=(t.boxR==null?16:t.boxR)*px/100;
+  sp.style.borderRadius=rad.toFixed(1)+"px";
+  const lw=(t.boxLW==null?4:t.boxLW)*px/38;   // 太さは文字サイズに対する比率
+  const be=t.boxEdge||"double",bc=t.boxLine||"#FFFFFF";
+  sp.style.border="0";sp.style.boxShadow="";
+  const deco=$("ttlDeco");deco.classList.remove("on");
+  if(lw>0&&be!=="none"){
+    if(be==="solid")sp.style.border=lw.toFixed(2)+"px solid "+bc;
+    else if(be==="double"){
+      sp.style.border=lw.toFixed(2)+"px solid "+bc;
+      sp.style.boxShadow="0 0 0 "+(lw*0.8).toFixed(2)+"px "+hexA(t.box||"#000",Math.max(a,.55))
+        +",0 0 0 "+(lw*1.9).toFixed(2)+"px "+bc;
+    }
+    else if(be==="dot")sp.style.border=(lw*1.5).toFixed(2)+"px dotted "+bc;
+    else if(be==="dash")sp.style.border=(lw*1.2).toFixed(2)+"px dashed "+bc;
+    else if(be==="round"){
+      sp.style.border=lw.toFixed(2)+"px solid "+bc;
+      sp.style.borderRadius="999px";
+    }
+    else{ // puffy / beads は SVG で描く
+      sp.style.border="0";
+      const r0=sp.getBoundingClientRect();
+      if(r0.width>2){
+        const w=r0.width,h=r0.height,m=lw*2.2;
+        const pts=ringPts(m*.5,m*.5,w-m,h-m,
+          Math.max(8,Math.min(60,Math.round((2*(w+h))/(m*(be==="puffy"?1.55:2.2))))));
+        const body=pts.map((q,i)=>{
+          const rr2=be==="puffy"?m*.9:(i%2?m*.42:m*.72);
+          return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${rr2.toFixed(1)}" `+
+                 `fill="${be==="puffy"?bc:(i%2?"#ffffff":bc)}"/>`;
+        }).join("");
+        deco.setAttribute("viewBox",`0 0 ${w.toFixed(0)} ${h.toFixed(0)}`);
+        deco.innerHTML=body;
+        deco.classList.add("on");
+      }
+    }
+  }
   e.style.setProperty("--tg",t.glowColor||"#FF57A0");
   e.className="on"+(t.glow&&t.glow!=="none"?" g-"+t.glow:"");
+}
+/* 文字の外側をぐるっと囲む＝痩せない、シールみたいなフチ */
+function ring(r,color){
+  const n=Math.max(14,Math.min(30,Math.round(r*3.2)));
+  const out=[];
+  for(let i=0;i<n;i++){
+    const a=i/n*Math.PI*2;
+    out.push((Math.cos(a)*r).toFixed(2)+"px "+(Math.sin(a)*r).toFixed(2)+"px 0 "+color);
+  }
+  return out.join(",");
 }
 function hexA(hex,a){
   const m=/^#?([0-9a-f]{6})$/i.exec(hex||"");
   if(!m)return"rgba(0,0,0,"+a+")";
   const n=parseInt(m[1],16);
   return"rgba("+(n>>16&255)+","+(n>>8&255)+","+(n&255)+","+a+")";
+}
+function syncTitleUI(){
+  const t=S.title||{};
+  $("tColor").value=t.color||"#FFFFFF";
+  $("tEdgeColor").value=t.edgeColor||"#FF57A0";
+  $("tEdge2").checked=t.edge2!==false;
+  $("tEdge2Color").value=t.edge2Color||"#FFFFFF";
+  $("tEdge").value=t.edge==null?7:t.edge;
+  $("vTEd").textContent=t.edge==null?7:t.edge;
+  $("tDrop").checked=t.drop!==false;
+  repaintColors();
 }
 function drawTitleFonts(){
   $("tFonts").innerHTML=TFONTS.map((f,i)=>
@@ -2779,6 +2867,30 @@ $("tFonts").addEventListener("click",e=>{
   $(id).addEventListener("input",()=>tSet(key,$(id).value));
 });
 $("tGlow").onchange=()=>tSet("glow",$("tGlow").value);
+$("tEdge2").onchange=()=>tSet("edge2",$("tEdge2").checked);
+$("tBoxEdges").addEventListener("click",e=>{
+  const b=e.target.closest("[data-be]");if(!b)return;
+  if(!S.title)S.title={};
+  S.title.boxEdge=b.dataset.be;
+  if(!S.title.boxLW)S.title.boxLW=4;
+  $("tBoxLW").value=S.title.boxLW;$("vTBw").textContent=S.title.boxLW;
+  markBoxEdge();renderTitle();save();
+});
+function markBoxEdge(){
+  const cur=(S.title||{}).boxEdge||"double";
+  document.querySelectorAll("#tBoxEdges [data-be]").forEach(b=>
+    b.classList.toggle("gold",b.dataset.be===cur));
+}
+$("tDrop").onchange=()=>tSet("drop",$("tDrop").checked);
+$("tEdge2Color").addEventListener("input",()=>tSet("edge2Color",$("tEdge2Color").value));
+document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
+  const p=b.dataset.ep,T=S.title=S.title||{};
+  if(p==="sticker"){T.edge=8;T.edgeColor="#FF57A0";T.edge2=true;T.edge2Color="#FFFFFF";T.color="#FFFFFF";T.drop=true}
+  if(p==="candy"){T.edge=9;T.edgeColor="#7A2E55";T.edge2=true;T.edge2Color="#FFD34D";T.color="#FFFFFF";T.drop=true}
+  if(p==="soft"){T.edge=10;T.edgeColor="#FFFFFF";T.edge2=false;T.color="#FF57A0";T.drop=true}
+  if(p==="none"){T.edge=0;T.edge2=false;T.drop=false}
+  syncTitleUI();renderTitle();save();
+});
 /* 盤面の上をドラッグして動かす */
 (function(){
   const e=$("ttl");let dg=null;
@@ -2791,8 +2903,8 @@ $("tGlow").onchange=()=>tSet("glow",$("tGlow").value);
   });
   e.addEventListener("pointermove",ev=>{
     if(!dg)return;
-    S.title.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.w,0,1);
-    S.title.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.h,0,1);
+    S.title.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.w,-.4,1.4);
+    S.title.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.h,-.4,1.4);
     renderTitle();
   });
   e.addEventListener("pointerup",()=>{
@@ -3016,10 +3128,14 @@ $("btnPng").onclick=()=>{
       if((t.boxA||0)>0){x.fillStyle=hexA(t.box||"#000",t.boxA);x.fill(pth)}
       if((t.boxLW||0)>0){x.strokeStyle=t.boxLine||"#fff";x.lineWidth=(t.boxLW||0)*fs/100;x.stroke(pth)}
     }
-    const ed=(t.edge==null?5:t.edge)*fs/100;
+    const ed=(t.edge==null?7:t.edge)*fs/100;
+    x.lineJoin="round";x.lineCap="round";
     lines.forEach((ln,i)=>{
       const yy=by+padY+lh*(i+.5);
-      if(ed>0){x.lineJoin="round";x.strokeStyle=t.edgeColor||"#000";x.lineWidth=ed*2;x.strokeText(ln,cx,yy)}
+      if(ed>0){
+        x.strokeStyle=t.edgeColor||"#FF57A0";x.lineWidth=ed*2;x.strokeText(ln,cx,yy);
+        if(t.edge2!==false){x.strokeStyle=t.edge2Color||"#FFFFFF";x.lineWidth=ed*1.04;x.strokeText(ln,cx,yy)}
+      }
       x.fillStyle=t.color||"#fff";x.fillText(ln,cx,yy);
     });
   }
@@ -3092,19 +3208,21 @@ function syncUI(){
   $("bgSel").value=S.bg;applyBg();
   $("pColor").value=st.pColor;$("pOpa").value=st.pOpa;$("bColor").value=st.bColor;
   $("bWidth").value=st.bWidth;$("fColor").value=st.fColor;$("fWeight").value=st.fWeight;$("fSize").value=st.fSize;
+  syncTitleUI();
+  const fr0=S.frame||{};void fr0;
   const t=S.title||{};
   $("tOn").checked=!!t.on;$("tText").value=t.text||"";
   $("tSize").value=t.size==null?1:t.size;$("vTSz").textContent=Number(t.size==null?1:t.size).toFixed(1);
   $("tX").value=t.x==null?.5:t.x;$("vTX2").textContent=Math.round((t.x==null?.5:t.x)*100)+"%";
   $("tY").value=t.y==null?.16:t.y;$("vTY2").textContent=Math.round((t.y==null?.16:t.y)*100)+"%";
-  $("tColor").value=t.color||"#FFFFFF";$("tEdgeColor").value=t.edgeColor||"#FF57A0";
-  $("tEdge").value=t.edge==null?5:t.edge;$("vTEd").textContent=t.edge==null?5:t.edge;
   $("tGlow").value=t.glow||"soft";$("tGlowColor").value=t.glowColor||"#FF57A0";
   $("tBox").value=t.box||"#3B2A38";$("tBoxA").value=t.boxA||0;
   $("vTBa").textContent=Math.round((t.boxA||0)*100)+"%";
   $("tBoxR").value=t.boxR==null?16:t.boxR;$("vTBr").textContent=t.boxR==null?16:t.boxR;
-  $("tBoxLine").value=t.boxLine||"#FFFFFF";$("tBoxLW").value=t.boxLW||0;
-  $("vTBw").textContent=t.boxLW||0;
+  $("tBoxLine").value=t.boxLine||"#FFFFFF";
+  $("tBoxLW").value=t.boxLW==null?4:t.boxLW;
+  $("vTBw").textContent=t.boxLW==null?4:t.boxLW;
+  markBoxEdge();
   const fr=S.frame||{};
   $("frColor").value=fr.color||"#FF57A0";
   $("frGlow").value=fr.glow||"soft";
