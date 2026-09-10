@@ -907,49 +907,95 @@ function genPieces(pat,W,H,o){
       sPts=shapePts(o.shape,W*(o.cx==null?.5:o.cx),H*(o.cy==null?.5:o.cy),rad,o.rot||0);
       sBox=bbox(sPts);cut=poly(sPts);
     }
-    const covered={};
-    (o.merges||[]).forEach(m=>{for(let r=m.r;r<m.r+m.h;r++)for(let c=m.c;c<m.c+m.w;c++)
+    const merges=o.merges||[],covered={};
+    merges.forEach(m=>{for(let r=m.r;r<m.r+m.h;r++)for(let c=m.c;c<m.c+m.w;c++)
       if(!(r===m.r&&c===m.c))covered[r+","+c]=1;});
-    const spanOf=(r,c)=>{const m=(o.merges||[]).find(m=>m.r===r&&m.c===c);return m?[m.w,m.h]:[1,1]};
-    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-      if(covered[r+","+c])continue;
-      const [sw,sh]=spanOf(r,c);
-      const x=c*cw,y=r*ch,w=sw*cw,h=sh*ch;
-      let lx=x+w/2,ly=y+h/2,scale=1,sliver=false;
-      if(sPts){
-        const ins=[],outs=[];
-        for(let i=1;i<=5;i++)for(let j=1;j<=5;j++){
-          const px=x+w*i/6,py=y+h*j/6;
-          (inPoly(px,py,sPts)?ins:outs).push([px,py]);
-        }
-        // drop the panel only when every sample AND every corner is behind the
-        // shape — otherwise a sliver of the picture would show through early
-        const corners=[[x,y],[x+w,y],[x,y+h],[x+w,y+h]]
-          .every(q=>inPoly(q[0]+(q[0]===x?.5:-.5),q[1]+(q[1]===y?.5:-.5),sPts));
-        if(!outs.length&&corners)continue;
-        if(ins.length&&outs.length){
-          // label goes where there is most room outside the shape,
-          // and among the roomiest spots the one nearest the panel's centre
-          const dep=outs.map(o=>{
-            let d=1e9;ins.forEach(q=>{d=Math.min(d,(o[0]-q[0])**2+(o[1]-q[1])**2)});return d;
-          });
-          const mx=Math.max.apply(null,dep);
-          let best=outs[0],bc=1e9;
-          outs.forEach((o,i)=>{
-            if(dep[i]<mx*.6)return;
-            const c=(o[0]-(x+w/2))**2+(o[1]-(y+h/2))**2;
-            if(c<bc){bc=c;best=o}
-          });
-          lx=best[0];ly=best[1];scale=Math.sqrt(outs.length/25)*.85;
-          // barely anything left showing — let it go with the centre shape
-          if(outs.length/25<.48)sliver=true;
-          const mgn=Math.sqrt(w*h)*scale*.5;                 // keep the text on the board
-          lx=clamp(lx,mgn,W-mgn);ly=clamp(ly,mgn*.5,H-mgn*.5);
-        }
+    const spanOf=(r,c)=>{const m=merges.find(m=>m.r===r&&m.c===c);return m?[m.w,m.h]:[1,1]};
+
+    /* シェイプに対して、その矩形のどこに文字を置くか・どれだけ見えているか */
+    const fit=(x,y,w,h)=>{
+      let lx=x+w/2,ly=y+h/2,scale=1,frac=1;
+      if(!sPts)return{lx,ly,scale,frac,allIn:false};
+      const ins=[],outs=[];
+      for(let i=1;i<=5;i++)for(let j=1;j<=5;j++){
+        const px=x+w*i/6,py=y+h*j/6;
+        (inPoly(px,py,sPts)?ins:outs).push([px,py]);
       }
-      push("g"+r+"-"+c,poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]),lx,ly,Math.sqrt(w*h)*scale,
-        {cut:!!sPts,gr:r,gc:c,gw:sw,gh:sh,sliver});
+      frac=outs.length/25;
+      const cornersIn=[[x,y],[x+w,y],[x,y+h],[x+w,y+h]]
+        .every(q=>inPoly(q[0]+(q[0]===x?.5:-.5),q[1]+(q[1]===y?.5:-.5),sPts));
+      if(!outs.length&&cornersIn)return{lx,ly,scale,frac:0,allIn:true};
+      if(ins.length&&outs.length){
+        const dep=outs.map(q=>{
+          let d=1e9;ins.forEach(z=>{d=Math.min(d,(q[0]-z[0])*(q[0]-z[0])+(q[1]-z[1])*(q[1]-z[1]))});return d;
+        });
+        const mx=Math.max.apply(null,dep);
+        let best=outs[0],bc=1e9;
+        outs.forEach((q,i)=>{
+          if(dep[i]<mx*.6)return;
+          const cc=(q[0]-(x+w/2))*(q[0]-(x+w/2))+(q[1]-(y+h/2))*(q[1]-(y+h/2));
+          if(cc<bc){bc=cc;best=q}
+        });
+        lx=best[0];ly=best[1];scale=Math.sqrt(outs.length/25)*.85;
+        const mgn=Math.sqrt(w*h)*scale*.5;
+        lx=clamp(lx,mgn,W-mgn);ly=clamp(ly,mgn*.5,H-mgn*.5);
+      }
+      return{lx,ly,scale,frac,allIn:false};
+    };
+
+    /* 1) 各マスを「残す／かけら／完全に裏」に分ける */
+    const info={};
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const key=r+","+c;
+      if(covered[key]){info[key]={cls:"skip"};continue}
+      const sp=spanOf(r,c);
+      if(sp[0]>1||sp[1]>1||!sPts){info[key]={cls:"keep",sw:sp[0],sh:sp[1]};continue}
+      const f=fit(c*cw,r*ch,cw,ch);
+      info[key]={cls:f.allIn?"full":(f.frac<.48?"sliver":"keep"),sw:1,sh:1};
     }
+
+    /* 2) かけらは同じ行のいちばん近い「残すマス」に取り込む
+          （シェイプはシェイプの形そのままで穴が開く） */
+    const range={},orphan=[];
+    for(let r=0;r<rows;r++){
+      const keeps=[];
+      for(let c=0;c<cols;c++){const t=info[r+","+c];if(t&&t.cls==="keep")keeps.push(c)}
+      for(let c=0;c<cols;c++){
+        const t=info[r+","+c];if(!t||t.cls==="skip")continue;
+        if(t.cls==="keep"){range[r+","+c]=range[r+","+c]||[c,c];continue}
+        if(!keeps.length){if(t.cls==="sliver")orphan.push([r,c]);continue}
+        let best=keeps[0];
+        keeps.forEach(k=>{
+          const d=Math.abs(k-c),db=Math.abs(best-c);
+          if(d<db||(d===db&&k<best))best=k;
+        });
+        const key=r+","+best;
+        range[key]=range[key]||[best,best];
+        range[key][0]=Math.min(range[key][0],c);
+        range[key][1]=Math.max(range[key][1],c);
+      }
+    }
+
+    /* 3) 書き出し */
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const t=info[r+","+c];
+      if(!t||t.cls!=="keep")continue;
+      const rg=range[r+","+c]||[c,c];
+      const c0=t.sw>1?c:rg[0],c1=t.sw>1?c+t.sw-1:rg[1];
+      const x=c0*cw,y=r*ch,w=(c1-c0+1)*cw,h=t.sh*ch;
+      const f=fit(x,y,w,h);
+      push("g"+r+"-"+c,poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]),
+        f.lx,f.ly,Math.sqrt(w*h)*f.scale,
+        {cut:!!sPts,gr:r,gc:c0,gw:c1-c0+1,gh:t.sh});
+    }
+    orphan.forEach(q=>{
+      const r=q[0],c=q[1],x=c*cw,y=r*ch;
+      const f=fit(x,y,cw,ch);
+      push("g"+r+"-"+c,poly([[x,y],[x+cw,y],[x+cw,y+ch],[x,y+ch]]),
+        f.lx,f.ly,Math.sqrt(cw*ch)*f.scale,
+        {cut:true,gr:r,gc:c,gw:1,gh:1,sliver:true});
+    });
+
     if(sPts){
       const n=o.split||1;
       const sw=(sBox.x1-sBox.x0)/n,sh=(sBox.y1-sBox.y0)/n;
@@ -964,14 +1010,12 @@ function genPieces(pat,W,H,o){
         push("c"+r+"-"+c,cut,x+sw/2,y+sh/2,Math.min(sw,sh)*(n>1?.62:.78),
           n>1?{clip:{x,y,w:sw,h:sh}}:{});
       }
-    }
-    if(sPts){
       const centres=P.filter(q=>q.k.charAt(0)==="c");
       if(centres.length)P.forEach(q=>{
         if(!q.sliver)return;
         let best=centres[0],bd=1e18;
-        centres.forEach(c=>{const d=(c.lx-q.lx)*(c.lx-q.lx)+(c.ly-q.ly)*(c.ly-q.ly);
-          if(d<bd){bd=d;best=c}});
+        centres.forEach(cc=>{const d=(cc.lx-q.lx)*(cc.lx-q.lx)+(cc.ly-q.ly)*(cc.ly-q.ly);
+          if(d<bd){bd=d;best=cc}});
         q.follow=best.k;
       });
     }
