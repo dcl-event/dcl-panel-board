@@ -97,6 +97,10 @@ button{cursor:pointer}
   content:"";position:absolute;inset:-7px;border:1.5px dashed rgba(255,87,160,.85);
   border-radius:12px;pointer-events:none}
 .fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.emo{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:2px}
+.emo button{border:1px solid var(--edge);background:#fff;border-radius:9px;padding:4px 0;
+  font-size:16px;line-height:1.1}
+.emo button:hover{border-color:var(--pink);background:var(--pink-wash)}
 .fnt{border:1.5px solid var(--edge);background:#fff;border-radius:11px;padding:7px 2px;
   font-size:17px;line-height:1;color:var(--plum);transition:.15s}
 .fnt:hover{border-color:var(--pink)}
@@ -129,7 +133,7 @@ button{cursor:pointer}
 .piece{transition:opacity .34s ease}
 .piece .face{transform-box:fill-box;transform-origin:center;
   transition:transform .38s cubic-bezier(.34,.1,.2,1),filter .3s}
-.piece text{pointer-events:none;user-select:none;font-family:var(--sans)}
+.piece text{pointer-events:none;user-select:none;font-family:var(--ptf,var(--sans))}
 .piece text.ct{font-family:var(--mono)}
 .piece text.no{font-family:var(--mono)}
 .piece.is-open{opacity:0;pointer-events:none}
@@ -699,6 +703,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         </div>
         <div class="row" style="align-items:flex-start"><label style="padding-top:8px">文字</label>
           <textarea id="tText" class="grow" placeholder="開けたら…な写真が…"></textarea></div>
+        <div class="row" id="tEmoRow"><label></label><div class="grow"></div></div>
         <div class="row" style="align-items:flex-start"><label style="padding-top:6px">書体</label>
           <div class="fonts grow" id="tFonts"></div></div>
         <div class="row"><label>大きさ</label>
@@ -806,6 +811,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="row"><label>枠線</label><input type="color" id="bColor" value="#0F1016"></div>
         <div class="row"><label>枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="1" value="6"><span class="val" id="vBw">6</span></div>
         <div class="row"><label>文字色</label><input type="color" id="fColor" value="#FFFFFF"></div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">文字の書体</label>
+          <div class="fonts grow" id="pFonts"></div></div>
         <div class="row"><label>文字の太さ</label>
           <select id="fWeight" class="grow"><option value="500">通常</option><option value="700">太字</option><option value="900" selected>極太</option></select>
         </div>
@@ -1229,7 +1236,7 @@ const DEF=()=>({
   pattern:"center",
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
-  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fSize:1,icSize:1,fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
+  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,editStep:1,fxBurst:true,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
   title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
@@ -1816,6 +1823,9 @@ const counted=()=>S.pieces.filter(q=>!q.follow);
 function render(keepInspector){
   syncFollowers();
   const H=vh(),st=S.style,svg=$("svg");
+  const pf=TFONTS[st.fFont||0]||TFONTS[0];
+  svg.style.setProperty("--ptf",pf.f);
+  const pfw=(st.fFont||0)===0||(st.fFont||0)===4?st.fWeight:pf.w;
   svg.setAttribute("viewBox",`0 0 ${VW} ${H}`);
   svg.innerHTML="";
   const defs=el("defs");
@@ -1916,7 +1926,7 @@ function render(keepInspector){
     }
     if(!p.follow)L.lines.forEach(ln=>{
       const t=el("text",{x:L.tcx.toFixed(1),y:(y+L.lh/2).toFixed(1),"text-anchor":"middle","dominant-baseline":"central",
-        fill:st.fColor,"font-weight":st.fWeight,"font-size":L.fs.toFixed(1)});
+        fill:st.fColor,"font-weight":pfw,"font-size":L.fs.toFixed(1)});
       if(st.fEdge!==false)edge(t,L.fs,st);
       t.textContent=ln;g.appendChild(t);fitList.push([t,L.roomW,L.bx,L.bx2]);y+=L.lh;
     });
@@ -2270,6 +2280,32 @@ function syncTitleUI(){
   $("tDrop").checked=t.drop!==false;
   repaintColors();
 }
+const EMOJI=["🎁","🎉","✨","💖","🩷","⭐️","🌸","🍀",
+             "👑","💎","🔥","💰","🏆","🎀","🫧","🥇"];
+function emoRow(target){
+  return `<div class="emo" data-emo="${target}">`+
+    EMOJI.map(e=>`<button type="button" data-e="${e}">${e}</button>`).join("")+`</div>`;
+}
+function insertAt(el,txt){
+  if(!el)return;
+  const s0=el.selectionStart==null?el.value.length:el.selectionStart;
+  const s1=el.selectionEnd==null?el.value.length:el.selectionEnd;
+  el.value=el.value.slice(0,s0)+txt+el.value.slice(s1);
+  el.selectionStart=el.selectionEnd=s0+txt.length;
+  el.dispatchEvent(new Event("input",{bubbles:true}));
+  el.focus();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".emo button[data-e]");if(!b)return;
+  const row=b.closest(".emo");
+  insertAt($(row.dataset.emo),b.dataset.e);
+});
+function drawPanelFonts(){
+  const cur=(S.style||{}).fFont||0;
+  $("pFonts").innerHTML=TFONTS.map((f,i)=>
+    `<button class="fnt" data-pf="${i}" aria-pressed="${cur===i}"
+      style="font-family:${f.f.replace(/"/g,"&quot;")};font-weight:${f.w}">あ</button>`).join("");
+}
 function drawTitleFonts(){
   $("tFonts").innerHTML=TFONTS.map((f,i)=>
     `<button class="fnt" data-f="${i}" aria-pressed="${(S.title||{}).font===i}"
@@ -2560,7 +2596,11 @@ function paintSel(){
     </div>
 
     <div data-tp="a" ${selTab==="a"?"":"hidden"}>
-      <div class="row"><label>表示文字</label><textarea id="sLabel" class="grow" placeholder="${one?"":"（まとめて入力）"}">${one?esc(one.label||""):""}</textarea></div>
+      <div class="row" style="align-items:flex-start"><label style="padding-top:8px">表示文字</label>
+        <div class="grow" style="display:flex;flex-direction:column;gap:6px">
+          <textarea id="sLabel" placeholder="${one?"":"（まとめて入力）"}">${one?esc(one.label||""):""}</textarea>
+          ${emoRow("sLabel")}
+        </div></div>
       <div class="row"><label>必要数</label>
         <button class="tbtn sq" id="needM">−</button>
         <input id="sNeed" type="number" min="0" class="grow" value="${one?one.need:""}" placeholder="${one?"":"まとめて設定"}">
@@ -2927,6 +2967,10 @@ function tSet(k,v,quiet){
 }
 $("tOn").onchange=()=>{tSet("on",$("tOn").checked);};
 $("tText").addEventListener("input",()=>tSet("text",$("tText").value));
+$("pFonts").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pf]");if(!b)return;
+  S.style.fFont=+b.dataset.pf;drawPanelFonts();render();save();
+});
 $("tFonts").addEventListener("click",e=>{
   const b=e.target.closest(".fnt");if(!b)return;
   tSet("font",+b.dataset.f);drawTitleFonts();
@@ -3162,7 +3206,9 @@ $("btnPng").onclick=()=>{
     const px=txt=>{const w=Math.min(x.measureText(txt).width,L.roomW)/2+2;
       return clamp(L.tcx,L.bx+w,Math.max(L.bx+w,L.bx2-w))};
     L.lines.forEach(ln=>{
-      const font=z=>`${st.fWeight} ${z}px "Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif`;
+      const pf2=TFONTS[st.fFont||0]||TFONTS[0];
+      const pw2=(st.fFont||0)===0||(st.fFont||0)===4?st.fWeight:pf2.w;
+      const font=z=>`${pw2} ${z}px ${pf2.f}`;
       x.font=font(L.fs);
       const fz=shrink(ln,L.fs);
       x.font=font(fz.toFixed(1));
@@ -3312,6 +3358,7 @@ function syncUI(){
   $("vFr").textContent=Number(fr.size==null?1:fr.size).toFixed(1);
   $("fxBurst").checked=S.fxBurst!==false;
   $("icSize").value=st.icSize==null?1:st.icSize;
+  drawPanelFonts();
   $("fEdge").checked=st.fEdge!==false;$("fEdgeColor").value=st.fEdgeColor||"#000000";
   repaintColors();
   $("showCount").checked=st.showCount;$("showNo").checked=st.showNo;
@@ -3330,7 +3377,8 @@ function seed(){
 }
 if(!load())seed();
 warmIcons();
-drawFrames();drawTitleFonts();
+drawFrames();drawTitleFonts();drawPanelFonts();
+$("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
 syncUI();applyImages();drawPatterns();patOpts();render();
