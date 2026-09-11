@@ -92,12 +92,13 @@ button{cursor:pointer}
 #fxcv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:15}
 #stk{position:absolute;inset:0;z-index:18;pointer-events:none}
 #stkBack{position:absolute;inset:0;z-index:4;pointer-events:none}
-.mode-edit #stkBack.up{z-index:19}
 .stkW{position:absolute;transform-origin:50% 50%;pointer-events:none}
 .mode-edit .stkW{pointer-events:auto;cursor:move}
 
 .preview .stkW,.mode-live .stkW{pointer-events:none}
 .stkW img{display:block;width:100%;height:auto;-webkit-user-drag:none;user-select:none}
+.stkW.ghost{background:rgba(255,123,181,.10)}
+.stkW.ghost img{opacity:0}
 .mode-edit .stkW.on::before{content:"";position:absolute;inset:-6px;border:2px dashed var(--selc2,#FF7BB5);
   border-radius:8px;pointer-events:none}
 .preview .stkW.on::before{content:none}
@@ -157,7 +158,7 @@ button{cursor:pointer}
 #fxcv.on{display:block}
 #ccv.on{display:block}
 .piece .face{pointer-events:all}
-#svg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#svg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:6}
 
 .piece{transition:opacity .34s ease}
 .piece .face{transform-box:fill-box;transform-origin:center;
@@ -788,7 +789,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <p class="hint" id="stkMsg" style="margin:2px 0 6px"></p>
           <div class="btnrow"><button class="tbtn" id="stkDel">削除</button></div>
         </div>
-        <p class="hint">盤面の上でドラッグして移動、ピンクの丸をドラッグで拡大縮小。盤面の外にも出せます。配信タブでは固定されるので、パネルのクリックを邪魔しません。<br>「マスの後ろ」にした画像は、<b style="color:var(--muted)">選んでいる間だけ手前に出て動かせます</b>。選択を外すとマスの後ろへ戻ります。</p>
+        <p class="hint">盤面の上でドラッグして移動、ピンクの丸をドラッグで拡大縮小。盤面の外にも出せます。配信タブでは固定されるので、パネルのクリックを邪魔しません。<br>「マスの後ろ」にすると、すぐマスの裏に回ります。選んでいる間は<b style="color:var(--muted)">うっすらピンクの「つかむ枠」</b>が手前に出るので、それをドラッグすれば動かせます。</p>
       </div>
 
       <div class="sect">
@@ -4416,7 +4417,7 @@ function stkAdd(file){
 }
 function drawStk(){
   const box=$("stk"),bk=$("stkBack");if(!box||!bk)return;
-  box.innerHTML="";bk.innerHTML="";bk.classList.remove("up");
+  box.innerHTML="";bk.innerHTML="";
   stkList().forEach(t=>{
     const w=document.createElement("div");
     w.className="stkW"+(t.id===stkCur?" on":"");
@@ -4429,7 +4430,17 @@ function drawStk(){
     w.appendChild(im);
     const h=document.createElement("b");h.className="stkH";w.appendChild(h);
     (t.back?bk:box).appendChild(w);
-    if(t.back&&t.id===stkCur)bk.classList.add("up");
+    /* マスの後ろに置いた画像は、選んでいる間だけ手前に「つかむ枠」を出して動かせるようにする */
+    if(t.back&&t.id===stkCur){
+      const gh=document.createElement("div");
+      gh.className="stkW on ghost";gh.dataset.id=t.id;
+      gh.style.left=w.style.left;gh.style.top=w.style.top;
+      gh.style.width=w.style.width;gh.style.transform=w.style.transform;
+      const gi=document.createElement("img");gi.src=t.src;gi.alt="";gi.draggable=false;
+      gh.appendChild(gi);
+      const gb=document.createElement("b");gb.className="stkH";gh.appendChild(gb);
+      box.appendChild(gh);
+    }
   });
 }
 function stkUI(){
@@ -4500,12 +4511,12 @@ $("stkDel").onclick=()=>{
     const t=stkList().find(q=>q.id===w.dataset.id);if(!t)return;
     ev.preventDefault();ev.stopPropagation();
     stkCur=t.id;drawStk();stkUI();focusSect("盤面に貼る画像");
-    const w2=document.querySelector('.stkW[data-id="'+t.id+'"]');
+    const w2=[...document.querySelectorAll('.stkW[data-id="'+t.id+'"]')];
     const b=$("board").getBoundingClientRect();
     const grab=ev.target.classList.contains("stkH");
     const cx=b.left+t.x*b.width,cy=b.top+t.y*b.height;
     dg={t,b,grab,x:ev.clientX,y:ev.clientY,x0:t.x,y0:t.y,w0:t.w,
-        d0:Math.max(8,Math.hypot(ev.clientX-cx,ev.clientY-cy)),cx,cy,el:w2};
+        d0:Math.max(8,Math.hypot(ev.clientX-cx,ev.clientY-cy)),cx,cy,els:w2};
     try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(err){}
   };
   box.addEventListener("pointerdown",onDown);
@@ -4519,10 +4530,10 @@ $("stkDel").onclick=()=>{
       t.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.b.width,-.5,1.5);
       t.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.b.height,-.5,1.5);
     }
-    if(dg.el){
-      dg.el.style.left=(t.x*100)+"%";dg.el.style.top=(t.y*100)+"%";
-      dg.el.style.width=(t.w*100)+"%";
-    }
+    (dg.els||[]).forEach(e2=>{
+      e2.style.left=(t.x*100)+"%";e2.style.top=(t.y*100)+"%";
+      e2.style.width=(t.w*100)+"%";
+    });
   };
   box.addEventListener("pointermove",onMove);
   bk.addEventListener("pointermove",onMove);
