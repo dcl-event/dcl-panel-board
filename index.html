@@ -3223,7 +3223,7 @@ $("svg").addEventListener("pointermove",ev=>{
   }
   if(!drag)return;drag.x1=ev.clientX;drag.y1=ev.clientY;drawMarq();
 });
-$("svg").addEventListener("pointerup",()=>{
+function endMarquee(){
   clearPre();
   if(inlineP){drag=null;return}
   if(move){move=null;rebuild();patOpts();render();save();return}
@@ -3235,15 +3235,26 @@ $("svg").addEventListener("pointerup",()=>{
     else if(drag.add){sel.has(p)?sel.delete(p):sel.add(p)}
     else sel=sel.size===1&&sel.has(p)?new Set():new Set([p]);
   }else{
-    const b=$("board").getBoundingClientRect(),k=VW/BW;
-    const x0=(Math.min(drag.x0,drag.x1)-b.left)*k,x1=(Math.max(drag.x0,drag.x1)-b.left)*k;
-    const y0=(Math.min(drag.y0,drag.y1)-b.top)*k,y1=(Math.max(drag.y0,drag.y1)-b.top)*k;
-    const picked=S.pieces.filter(p=>!p.follow&&p.lx>=x0&&p.lx<=x1&&p.ly>=y0&&p.ly<=y1);
+    const picked=marqPick();
     if(drag.add)picked.forEach(p=>sel.add(p));else sel=new Set(picked);
   }
   drag=null;if(marq){marq.remove();marq=null}
   paintSel();
+}
+$("svg").addEventListener("pointerup",endMarquee);
+$("stage").addEventListener("pointerdown",ev=>{
+  if(!isEdit()||ev.target!==$("stage"))return;   // 盤面の外の余白から
+  ev.preventDefault();
+  drag={x0:ev.clientX,y0:ev.clientY,x1:ev.clientX,y1:ev.clientY,add:ev.shiftKey,piece:null};
+  marq=document.createElement("div");marq.className="marquee";$("board").appendChild(marq);
+  drawMarq();
+  try{$("stage").setPointerCapture(ev.pointerId)}catch(e){}
 });
+window.addEventListener("pointermove",ev=>{
+  if(!drag)return;
+  drag.x1=ev.clientX;drag.y1=ev.clientY;drawMarq();
+});
+window.addEventListener("pointerup",()=>{if(drag)endMarquee()});
 $("svg").addEventListener("contextmenu",ev=>{
   if(isEdit())return;
   ev.preventDefault();
@@ -3251,11 +3262,16 @@ $("svg").addEventListener("contextmenu",ev=>{
   if(g)hitPiece(S.pieces[+g.dataset.i],-1);
 });
 function marqPick(){
-  if(!drag)return[];
+  if(!drag||!BW||!BH)return[];
   const b=$("board").getBoundingClientRect(),k=VW/BW;
   const x0=(Math.min(drag.x0,drag.x1)-b.left)*k,x1=(Math.max(drag.x0,drag.x1)-b.left)*k;
   const y0=(Math.min(drag.y0,drag.y1)-b.top)*k,y1=(Math.max(drag.y0,drag.y1)-b.top)*k;
-  return S.pieces.filter(p=>!p.follow&&p.lx>=x0&&p.lx<=x1&&p.ly>=y0&&p.ly<=y1);
+  /* ひとかけらでも枠に触れていれば拾う */
+  return S.pieces.filter(p=>{
+    if(p.follow)return false;
+    const q=dBox(p);
+    return q.x<x1&&q.x+q.w>x0&&q.y<y1&&q.y+q.h>y0;
+  });
 }
 function drawMarq(){
   if(!marq||!drag)return;
