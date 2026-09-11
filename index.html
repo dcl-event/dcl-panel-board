@@ -81,6 +81,24 @@ button{cursor:pointer}
 #cvid{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
 #ccv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none}
 #fxcv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:15}
+#stk{position:absolute;inset:0;z-index:18;pointer-events:none}
+.stkW{position:absolute;transform-origin:50% 50%;pointer-events:none}
+.mode-edit .stkW{pointer-events:auto;cursor:move}
+.preview .stkW,.mode-live .stkW{pointer-events:none}
+.stkW img{display:block;width:100%;height:auto;-webkit-user-drag:none;user-select:none}
+.mode-edit .stkW.on::before{content:"";position:absolute;inset:-6px;border:2px dashed var(--selc2,#FF7BB5);
+  border-radius:8px;pointer-events:none}
+.preview .stkW.on::before{content:none}
+.stkH{position:absolute;right:-11px;bottom:-11px;width:22px;height:22px;border-radius:50%;
+  background:var(--selc2,#FF7BB5);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);
+  cursor:nwse-resize;display:none}
+.mode-edit .stkW.on .stkH{display:block}
+.preview .stkH{display:none!important}
+.stkList{display:flex;flex-wrap:wrap;gap:7px}
+.stkList button{width:54px;height:54px;padding:0;border-radius:10px;overflow:hidden;
+  border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer}
+.stkList button[aria-pressed="true"]{border-color:var(--pink-deep);box-shadow:0 0 0 3px var(--pink-wash)}
+.stkList img{max-width:100%;max-height:100%;object-fit:contain}
 #ttl{position:absolute;z-index:19;display:none;width:max-content;max-width:88%;text-align:center;
   transform:translate(-50%,-50%);white-space:pre-wrap;line-height:1.25;pointer-events:none}
 #ttl.on{display:block;pointer-events:auto;cursor:move}
@@ -161,6 +179,9 @@ button{cursor:pointer}
 @keyframes fxspark{0%,100%{opacity:0;transform:scale(.25)}45%{opacity:1;transform:scale(1)}}
 .mode-edit .piece{cursor:pointer}
 .mode-live .piece{cursor:pointer}
+#sea .wv{animation:seaflow linear infinite;will-change:transform}
+@keyframes seaflow{from{transform:translateX(0)}to{transform:translateX(-1000px)}}
+@media (prefers-reduced-motion:reduce){#sea .wv{animation:none}}
 .selring{fill:none;pointer-events:none}
 .selring.mark{stroke-dasharray:var(--dA,22px) var(--dB,14px);animation:selmarch 1.35s linear infinite}
 @keyframes selmarch{from{stroke-dashoffset:0}to{stroke-dashoffset:var(--dE,-36px)}}
@@ -628,7 +649,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
   <div class="main">
     <div class="stagewrap">
       <div class="stage" id="stage" data-bg="dark">
-        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="fxcv"></canvas></div>
+        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><div id="stk"></div><canvas id="fxcv"></canvas></div>
       </div>
       <div class="livebar">
         <div class="cursel" id="cursel">
@@ -699,6 +720,26 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <label class="toggle"><input type="checkbox" id="vidRestart" checked>コンプリートで頭から</label>
         </div>
         <p class="hint">ドラッグ&amp;ドロップ、<kbd>⌘V</kbd> 貼り付けでも入ります。<b style="color:var(--muted)">どちらも動画（mp4/webm）が置けます</b>。音が出せるのは公開用のほうだけです。</p>
+      </div>
+
+      <div class="sect">
+        <h3>貼り付け画像</h3>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="tbtn" id="stkPick">＋ 画像を追加</button>
+        </div>
+        <input type="file" id="stkFile" accept="image/*" multiple hidden>
+        <div class="stkList" id="stkThumbs"></div>
+        <div id="stkEdit" hidden style="margin-top:10px">
+          <div class="row"><label>大きさ</label><input type="range" id="stkW" min="0.03" max="1.6" step="0.01" value="0.28"><span class="val" id="vStkW">28%</span></div>
+          <div class="row"><label>回転</label><input type="range" id="stkR" min="-180" max="180" step="1" value="0"><span class="val" id="vStkR">0°</span></div>
+          <div class="row"><label>透明度</label><input type="range" id="stkO" min="0.05" max="1" step="0.05" value="1"><span class="val" id="vStkO">100%</span></div>
+          <div class="btnrow">
+            <button class="tbtn" id="stkFront">前へ</button>
+            <button class="tbtn" id="stkBack">後ろへ</button>
+            <button class="tbtn" id="stkDel">削除</button>
+          </div>
+        </div>
+        <p class="hint">盤面の上でドラッグして移動、ピンクの丸をドラッグで拡大縮小。盤面の外にも出せます。配信タブでは固定されるので、パネルのクリックを邪魔しません。</p>
       </div>
 
       <div class="sect">
@@ -1312,6 +1353,8 @@ const DEF=()=>({
   pattern:"center",
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
+  sea:{on:false,color:"#1E6FA8",wave:"wave"},
+  stk:[],
   style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",selColor:"#F5B33C",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,steps:[1,10,100,1000,10000],editStep:1,fxBurst:true,zoom:1,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
@@ -1919,6 +1962,40 @@ function syncFollowers(){
   return changed;
 }
 const counted=()=>S.pieces.filter(q=>!q.follow);
+/* 日本地図の下に敷く海。波は横にゆっくり流れる（VW ぶん動かすので継ぎ目が出ない） */
+const SEA_WAVE={calm:[5,5,30,.26,2.4],wave:[7,11,17,.36,3],storm:[9,20,10,.46,3.6]};
+function seaDefs(defs,H){
+  const s=S.sea||{};
+  if(S.pattern!=="japan"||!s.on)return;
+  const c=s.color||"#1E6FA8",hsl=hex2hsl(c);
+  const lg=el("linearGradient",{id:"seaG",x1:"0",y1:"0",x2:"0",y2:"1"});
+  [[0,Math.min(.82,hsl[2]+.16)],[.55,hsl[2]],[1,Math.max(.06,hsl[2]-.17)]].forEach(([o,l])=>
+    lg.appendChild(el("stop",{offset:o,"stop-color":hsl2hex(hsl[0],hsl[1],l)})));
+  defs.appendChild(lg);
+}
+function seaLayer(H){
+  const s=S.sea||{};
+  if(S.pattern!=="japan"||!s.on)return null;
+  const P=SEA_WAVE[s.wave||"wave"]||SEA_WAVE.wave;
+  const n=P[0],amp=P[1],dur=P[2],op=P[3],lw=P[4];
+  const hsl=hex2hsl(s.color||"#1E6FA8");
+  const foam=hsl2hex(hsl[0],Math.max(.12,hsl[1]-.25),Math.min(.94,hsl[2]+.38));
+  const g=el("g",{id:"sea"});
+  g.appendChild(el("rect",{x:0,y:0,width:VW,height:H,fill:"url(#seaG)"}));
+  for(let i=0;i<n;i++){
+    const y=H*(i+.55)/(n+.1);
+    const k=3+(i%3),L=VW/k,step=L/14;
+    let d="M "+(-VW)+","+y.toFixed(1);
+    for(let x=-VW+step;x<=VW*2;x+=step)
+      d+=" L "+x.toFixed(1)+","+(y+Math.sin(x/L*Math.PI*2+i)*amp).toFixed(1);
+    const w=el("path",{d,fill:"none",stroke:foam,"stroke-width":(lw*(1+(i%2)*.5)).toFixed(1),
+      "stroke-linecap":"round",opacity:(op*(i%2?.72:1)).toFixed(2),class:"wv"});
+    w.style.animationDuration=(dur*(1+(i%3)*.35)).toFixed(1)+"s";
+    if(i%2)w.style.animationDirection="reverse";
+    g.appendChild(w);
+  }
+  return g;
+}
 function render(keepInspector){
   syncFollowers();
   const H=vh(),st=S.style,svg=$("svg");
@@ -1964,7 +2041,9 @@ function render(keepInspector){
       el("stop",{offset:o[0],"stop-color":fxOf(p),"stop-opacity":o[1]})));
     defs.appendChild(lg);
   });
+  seaDefs(defs,H);
   svg.appendChild(defs);
+  const sea=seaLayer(H);if(sea)svg.appendChild(sea);
 
   const fitList=[];
   const litMode=S.pattern==="japan",litC=st.litColor||"#FFD34D";
@@ -2664,7 +2743,17 @@ function patOpts(){
   if(S.pattern==="rings")h+=stepRow("rings",o.rings,2,10,"リング数");
   if(S.pattern==="jigsaw")h+=`<div class="btnrow" style="margin-top:8px"><button class="tbtn" id="reseed">形をシャッフル</button></div>`;
   if(S.pattern==="japan"){
-    h+=`<div class="row"><label>地図の色</label><input type="color" id="jpFill" value="${S.style.pColor}"></div>
+    const sea=S.sea||{};
+    h+=`<div class="row"><label>背景の海</label>
+        <select id="jpSea" class="grow">
+          <option value="off">なし（透明のまま）</option>
+          <option value="calm">しずかな海</option>
+          <option value="wave">波あり</option>
+          <option value="storm">うねる波</option>
+        </select></div>
+      <div class="row"><label>海の色</label><input type="color" id="jpSeaC" value="${sea.color||"#1E6FA8"}"></div>
+      <div class="row"><label></label><span class="hint" style="margin:0">波は横にゆっくり流れます。</span></div>
+      <div class="row"><label>地図の色</label><input type="color" id="jpFill" value="${S.style.pColor}"></div>
       <div class="row"><label>地図のふち</label><input type="color" id="jpEdge" value="${S.style.bColor}"></div>
       <div class="row"><label>埋まった色</label><input type="color" id="jpLit" value="${S.style.litColor||"#FFD34D"}"></div>
       <p class="hint">47都道府県ぜんぶまとめて変わります（個別に塗った色も戻ります）。</p>`;
@@ -2684,6 +2773,17 @@ function patOpts(){
     i.oninput=()=>{show();setOpt(i.dataset.k,+i.value,true)};
     i.onchange=()=>{show();setOpt(i.dataset.k,+i.value)};
   });
+  const seaSel=$("jpSea");
+  if(seaSel){
+    const s0=S.sea||(S.sea={on:false,color:"#1E6FA8",wave:"wave"});
+    seaSel.value=s0.on?(s0.wave||"wave"):"off";
+    seaSel.addEventListener("change",()=>{
+      s0.on=seaSel.value!=="off";
+      if(s0.on)s0.wave=seaSel.value;
+      render();save();
+    });
+    $("jpSeaC").addEventListener("input",()=>{s0.color=$("jpSeaC").value;render();save()});
+  }
   [["jpFill","pColor","pc"],["jpEdge","bColor","bc"],["jpLit","litColor",null]].forEach(([id,key,per])=>{
     const e=$(id);if(!e)return;
     e.addEventListener("input",()=>{
@@ -3216,6 +3316,121 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
   if(p==="none"){T.edge=0;T.edge2=false;T.drop=false}
   syncTitleUI();renderTitle();save();
 });
+/* ============ 貼り付け画像（ステッカー） ============ */
+let stkCur=null;
+function stkList(){return S.stk||(S.stk=[])}
+function stkAdd(file){
+  if(!file||!/^image\//.test(file.type))return;
+  const fr=new FileReader();
+  fr.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      const max=900,sc=Math.min(1,max/Math.max(im.width,im.height));
+      const c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));
+      c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+      pushUndo();
+      const id="s"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+      stkList().push({id,src:c.toDataURL("image/png"),x:.5,y:.5,w:.28,rot:0,op:1});
+      stkCur=id;drawStk();stkUI();save();
+    };
+    im.src=e.target.result;
+  };
+  fr.readAsDataURL(file);
+}
+function drawStk(){
+  const box=$("stk");if(!box)return;
+  box.innerHTML="";
+  stkList().forEach(t=>{
+    const w=document.createElement("div");
+    w.className="stkW"+(t.id===stkCur?" on":"");
+    w.dataset.id=t.id;
+    w.style.left=(t.x*100)+"%";w.style.top=(t.y*100)+"%";
+    w.style.width=(t.w*100)+"%";
+    w.style.transform="translate(-50%,-50%) rotate("+(t.rot||0)+"deg)";
+    w.style.opacity=t.op==null?1:t.op;
+    const im=document.createElement("img");im.src=t.src;im.alt="";im.draggable=false;
+    w.appendChild(im);
+    const h=document.createElement("b");h.className="stkH";w.appendChild(h);
+    box.appendChild(w);
+  });
+}
+function stkUI(){
+  const box=$("stkThumbs");if(!box)return;
+  const arr=stkList();
+  box.innerHTML=arr.length
+    ? arr.map(t=>`<button data-id="${t.id}" aria-pressed="${t.id===stkCur}" title="選ぶ"><img src="${t.src}" alt=""></button>`).join("")
+    : `<span class="hint" style="margin:0">まだありません。「画像を追加」から。</span>`;
+  const t=arr.find(q=>q.id===stkCur)||null;
+  $("stkEdit").hidden=!t;
+  if(t){
+    $("stkW").value=t.w;$("vStkW").textContent=Math.round(t.w*100)+"%";
+    $("stkR").value=t.rot||0;$("vStkR").textContent=Math.round(t.rot||0)+"°";
+    $("stkO").value=t.op==null?1:t.op;$("vStkO").textContent=Math.round((t.op==null?1:t.op)*100)+"%";
+  }
+  box.querySelectorAll("button[data-id]").forEach(b=>b.onclick=()=>{
+    stkCur=stkCur===b.dataset.id?null:b.dataset.id;drawStk();stkUI();
+  });
+}
+$("stkFile").addEventListener("change",e=>{
+  [...e.target.files].forEach(f=>stkAdd(f));e.target.value="";
+});
+$("stkPick").onclick=()=>$("stkFile").click();
+[["stkW","w",v=>v],["stkR","rot",v=>v],["stkO","op",v=>v]].forEach(([id,key])=>{
+  $(id).addEventListener("input",()=>{
+    const t=stkList().find(q=>q.id===stkCur);if(!t)return;
+    t[key]=+$(id).value;
+    $("vStkW").textContent=Math.round(t.w*100)+"%";
+    $("vStkR").textContent=Math.round(t.rot||0)+"°";
+    $("vStkO").textContent=Math.round((t.op==null?1:t.op)*100)+"%";
+    drawStk();save();
+  });
+});
+$("stkFront").onclick=()=>{
+  const a=stkList(),i=a.findIndex(q=>q.id===stkCur);
+  if(i<0||i===a.length-1)return;a.push(a.splice(i,1)[0]);drawStk();stkUI();save();
+};
+$("stkBack").onclick=()=>{
+  const a=stkList(),i=a.findIndex(q=>q.id===stkCur);
+  if(i<=0)return;a.unshift(a.splice(i,1)[0]);drawStk();stkUI();save();
+};
+$("stkDel").onclick=()=>{
+  const a=stkList(),i=a.findIndex(q=>q.id===stkCur);
+  if(i<0)return;pushUndo();a.splice(i,1);stkCur=null;drawStk();stkUI();save();
+};
+(function(){
+  const box=$("stk");let dg=null;
+  box.addEventListener("pointerdown",ev=>{
+    const w=ev.target.closest(".stkW");if(!w||!isEdit())return;
+    const t=stkList().find(q=>q.id===w.dataset.id);if(!t)return;
+    ev.preventDefault();ev.stopPropagation();
+    stkCur=t.id;drawStk();stkUI();
+    const w2=$("stk").querySelector('.stkW[data-id="'+t.id+'"]');
+    const b=$("board").getBoundingClientRect();
+    const grab=ev.target.classList.contains("stkH");
+    const cx=b.left+t.x*b.width,cy=b.top+t.y*b.height;
+    dg={t,b,grab,x:ev.clientX,y:ev.clientY,x0:t.x,y0:t.y,w0:t.w,
+        d0:Math.max(8,Math.hypot(ev.clientX-cx,ev.clientY-cy)),cx,cy,el:w2};
+    try{box.setPointerCapture(ev.pointerId)}catch(err){}
+  });
+  box.addEventListener("pointermove",ev=>{
+    if(!dg)return;
+    const t=dg.t;
+    if(dg.grab){
+      t.w=clamp(dg.w0*Math.hypot(ev.clientX-dg.cx,ev.clientY-dg.cy)/dg.d0,.03,3);
+    }else{
+      t.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.b.width,-.5,1.5);
+      t.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.b.height,-.5,1.5);
+    }
+    if(dg.el){
+      dg.el.style.left=(t.x*100)+"%";dg.el.style.top=(t.y*100)+"%";
+      dg.el.style.width=(t.w*100)+"%";
+    }
+  });
+  const end=()=>{if(!dg)return;dg=null;stkUI();save()};
+  box.addEventListener("pointerup",end);
+  box.addEventListener("pointercancel",end);
+})();
 /* 盤面の上をドラッグして動かす */
 (function(){
   const e=$("ttl");let dg=null;
@@ -3357,7 +3572,7 @@ $("fileJson").onchange=e=>{
       rebuild();
       const by={};saved.forEach(q=>by[q.k]=q);
       S.pieces.forEach(q=>applyTo(q,by[q.k]));
-      warmIcons();syncUI();stepLabels();applyImages();drawPatterns();patOpts();render();layout();save();
+      warmIcons();syncUI();stepLabels();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();layout();save();
     }catch(err){alert("読み込めませんでした。書き出したJSONを選んでください。")}
   };
   fr.readAsText(f);
@@ -3610,7 +3825,7 @@ drawFrames();drawTitleFonts();drawPanelFonts();
 $("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
-syncUI();applyImages();drawPatterns();patOpts();render();
+syncUI();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();
 new ResizeObserver(()=>layout()).observe($("stage"));
 requestAnimationFrame(layout);
 setTimeout(layout,260);
