@@ -80,6 +80,8 @@ button{cursor:pointer}
 #rvid[hidden]{display:none}
 #cvid{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
 #ccv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none}
+#dragfx{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:25}
+#dragfx.on{display:block}
 #seafx{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:16}
 #seafx.on{display:block}
 #fxcv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:15}
@@ -653,6 +655,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     <div class="stagewrap">
       <div class="stage" id="stage" data-bg="dark">
         <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="seafx"></canvas><div id="stk"></div><canvas id="fxcv"></canvas></div>
+        <canvas id="dragfx"></canvas>
       </div>
       <div class="livebar">
         <div class="cursel" id="cursel">
@@ -3438,27 +3441,48 @@ function seaSpawn(tier){
     by:isD?.80:(.3+Math.random()*.56),
     hgt:isD?.62:tier==="rare"?.26+Math.random()*.12:.10+Math.random()*.11,
     dist:isD?.68:tier==="rare"?.18+Math.random()*.10:.07+Math.random()*.12,
-    dur:isD?7000:tier==="rare"?2300+Math.random()*800:1000+Math.random()*650,
+    dur:isD?11500:tier==="rare"?2300+Math.random()*800:1000+Math.random()*650,
     t0:performance.now(),seed:Math.random()*99,
     scale:(sp.s||1)*(isD?1:tier==="rare"?1:.85+Math.random()*.4)};
   seaAct.push(o);seaKick();
 }
+function dragGeo(){
+  const st=$("stage"),b=$("board");
+  const sr=st.getBoundingClientRect(),br=b.getBoundingClientRect();
+  return{W:st.clientWidth,H:st.clientHeight,
+         bx:br.left-sr.left,by:br.top-sr.top,bw:br.width,bh:br.height};
+}
 function seaKick(){if(seaRun)return;seaRun=true;frameTick(seaLoop)}
-function seaLoop(){
-  seaRun=false;
-  const cv=$("seafx");if(!cv)return;
-  const now=performance.now();
-  seaAct=seaAct.filter(o=>now-o.t0<o.dur+500);
-  if(!seaAct.length){cv.classList.remove("on");return}
-  cv.classList.add("on");
+function fitCv(cv,w,h){
   const dpr=Math.min(2,window.devicePixelRatio||1);
-  const w=Math.max(1,Math.round(BW*dpr)),h=Math.max(1,Math.round(BH*dpr));
-  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+  const a=Math.max(1,Math.round(w*dpr)),b=Math.max(1,Math.round(h*dpr));
+  if(cv.width!==a||cv.height!==b){cv.width=a;cv.height=b}
   const x=cv.getContext("2d");
   x.setTransform(dpr,0,0,dpr,0,0);
-  x.clearRect(0,0,BW,BH);
-  seaAct.forEach(o=>seaDraw(x,o,now));
-  seaKick();
+  x.clearRect(0,0,w,h);
+  return x;
+}
+function seaLoop(){
+  seaRun=false;
+  const cv=$("seafx"),cd=$("dragfx");if(!cv||!cd)return;
+  const now=performance.now();
+  seaAct=seaAct.filter(o=>now-o.t0<o.dur+500);
+  const fish=seaAct.filter(o=>o.sp.k!=="dragon");
+  const drg=seaAct.filter(o=>o.sp.k==="dragon");
+  if(fish.length&&BW&&BH){
+    cv.classList.add("on");
+    const x=fitCv(cv,BW,BH);
+    fish.forEach(o=>seaDraw(x,o,now));
+  }else cv.classList.remove("on");
+  if(drg.length){
+    const G=dragGeo();
+    if(G.W>8&&G.H>8){
+      cd.classList.add("on");
+      const x=fitCv(cd,G.W,G.H);
+      drg.forEach(o=>drawDragonFx(x,o,clamp((now-o.t0)/o.dur,0,1)));
+    }
+  }else cd.classList.remove("on");
+  if(seaAct.length)seaKick();
 }
 function splash(x,cx,cy,r,a,col){
   x.save();x.globalAlpha=a;x.strokeStyle=col;x.lineWidth=Math.max(1.2,r*.10);
@@ -3619,7 +3643,10 @@ function drawBody(x,k,c){
     x.fillStyle=c;eye(.46,-.08,.035)}
 }
 /* 龍：覇王色の覇気をまとって海から飛び出す隠し演出 */
-const DRAGON_PATH=[[.02,1.34],[.10,.96],[.26,.60],[.56,.33],[.86,.11],[.70,.36],[.36,.52],[.50,.94],[.60,1.34]];
+const DRAGON_PATH=[
+  [.34,1.42],[.36,1.05],[.30,.80],[.10,.58],[-.22,.40],[-.30,.06],
+  [-.02,-.20],[.36,-.26],[.74,-.12],[1.10,.10],[1.28,.42],[1.06,.70],
+  [.72,.72],[.44,.56],[.16,.66],[.14,.98],[.34,1.24],[.44,1.55]];
 function curveAt(pts,u){
   const n=pts.length-1,f=clamp(u,0,1)*n,i=Math.min(n-1,Math.floor(f)),s=f-i;
   const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n,i+2)];
@@ -3771,17 +3798,48 @@ function dragonHead(x,S0,t){
     x.quadraticCurveTo(a-.45,.78,a+.1,.52);x.closePath();x.fill();
   }
 }
+function drawClouds(x,SW,SH,t,seed,beat,env){
+  const rows=[[-.06,.02,.20],[.24,-.03,.24],[.56,.03,.21],[.86,-.02,.19],[1.10,.04,.16]];
+  x.save();x.globalAlpha=Math.min(1,env*1.7);
+  rows.forEach(([cx,cy,r],i)=>{
+    for(let j=0;j<6;j++){
+      const px=(cx+j*.05)*SW+Math.sin(t*1.1+i+j)*SW*.008;
+      const py=(cy+.075+Math.sin(j*1.7+i*2.1)*.030)*SH;
+      const rr=r*SW*(.5+((j+i)%3)*.22);
+      const flash=((beat+i*5+j*2)%41)<2;
+      const g=x.createRadialGradient(px,py-rr*.25,rr*.05,px,py,rr);
+      g.addColorStop(0,flash?"rgba(255,196,206,.6)":"rgba(52,44,66,.95)");
+      g.addColorStop(.5,"rgba(24,20,36,.95)");
+      g.addColorStop(1,"rgba(10,8,16,0)");
+      x.fillStyle=g;x.beginPath();x.arc(px,py,rr,0,Math.PI*2);x.fill();
+    }
+  });
+  x.restore();
+}
+function drawRain(x,SW,SH,beat,env){
+  x.save();x.globalAlpha=.32*env;x.strokeStyle="rgba(196,212,244,.55)";
+  x.lineWidth=Math.max(1,SW*.0014);
+  for(let i=0;i<80;i++){
+    const px=((i*137+beat*29)%997)/997*SW;
+    const py=((i*61+beat*53)%991)/991*SH;
+    const ln=SH*.035;
+    x.beginPath();x.moveTo(px,py);x.lineTo(px-ln*.28,py+ln);x.stroke();
+  }
+  x.restore();
+}
 function drawDragonFx(x,o,t){
-  const S0=Math.min(BW,BH),wy=o.by*BH,beat=Math.floor(t*o.dur/85);
+  const G=dragGeo(),SW=G.W,SH=G.H;
+  const S0=Math.min(SW,SH),wy=G.by+o.by*G.bh,beat=Math.floor(t*o.dur/85);
   const mir=o.dir<0;
   const P=DRAGON_PATH.map(p=>[mir?1-p[0]:p[0],p[1]]);
-  const BODY=.46,W=S0*.036;
+  const bxp=G.bx+o.bx*G.bw;
+  const BODY=.40,W=S0*.032;
   const N=64,pts=[];
   const headU=t*(1+BODY);
   for(let i=0;i<N;i++){
     const k=i/(N-1),u=headU-k*BODY;
     const c=curveAt(P,u);
-    let X=c[0]*BW,Y=c[1]*BH;
+    let X=c[0]*SW,Y=c[1]*SH;
     const ph=k*7.4-t*11+o.seed;
     const nx=curveAt(P,u+.004),tx=nx[0]-c[0],ty=nx[1]-c[1],ln=Math.hypot(tx,ty)||1;
     const amp=S0*.030*(.25+k*.9)*Math.min(1,t*3);
@@ -3791,17 +3849,19 @@ function drawDragonFx(x,o,t){
   /* 画面ぜんぶを覇気で沈める */
   const env=Math.sin(clamp(t/.9,0,1)*Math.PI);
   x.save();x.globalAlpha=Math.min(1,env*1.8);
-  x.fillStyle="rgba(8,0,6,.46)";x.fillRect(0,0,BW,BH);
+  x.fillStyle="rgba(8,0,6,.46)";x.fillRect(0,0,SW,SH);
   const vg=x.createRadialGradient(pts[0][0],pts[0][1],S0*.03,pts[0][0],pts[0][1],S0*1.15);
   vg.addColorStop(0,"rgba(70,0,16,0)");vg.addColorStop(.38,"rgba(22,0,10,.6)");vg.addColorStop(1,"rgba(3,0,2,.96)");
-  x.fillStyle=vg;x.fillRect(0,0,BW,BH);x.restore();
+  x.fillStyle=vg;x.fillRect(0,0,SW,SH);x.restore();
+  drawClouds(x,SW,SH,t,o.seed,beat,env);
+  drawRain(x,SW,SH,beat,env);
   /* 揺れ */
   const shake=(t<.14?1:t>.40&&t<.54?.8:.25)*env*S0*.012;
   x.save();
   x.translate(Math.sin(beat*2.7)*shake,Math.cos(beat*3.9)*shake);
   /* 飛び出しの水柱 */
   if(t<.24){
-    const k=t/.24,cx=P[0][0]*BW;
+    const k=t/.24,cx=bxp;
     x.save();x.globalAlpha=(1-k)*.95;
     x.fillStyle="rgba(255,255,255,.9)";
     x.beginPath();x.ellipse(cx,wy-S0*.30*k,S0*.055*(1+k*2),S0*.36*(1-k*.2),0,0,Math.PI*2);x.fill();
@@ -3821,11 +3881,11 @@ function drawDragonFx(x,o,t){
   /* 画像を入れてあるときは、その絵をそのまま飛ばす */
   if(dragImg&&dragImg.width){
     const u=headU-.16,c=curveAt(P,u),c2=curveAt(P,u+.02);
-    const cx=c[0]*BW,cy=c[1]*BH;
-    let ang=Math.atan2((c2[1]-c[1])*BH,(c2[0]-c[0])*BW);
-    const iw=BW*.66,ih=iw*dragImg.height/dragImg.width;
+    const cx=c[0]*SW,cy=c[1]*SH;
+    let ang=Math.atan2((c2[1]-c[1])*SH,(c2[0]-c[0])*SW);
+    const iw=SW*.66,ih=iw*dragImg.height/dragImg.width;
     x.save();
-    x.beginPath();x.rect(0,0,BW,wy+ih*.1);x.clip();
+    x.beginPath();x.rect(0,0,SW,wy+ih*.1);x.clip();
     x.translate(cx,cy);
     if(mir){x.scale(-1,1);ang=Math.PI-ang}
     x.rotate(ang);
@@ -3836,7 +3896,7 @@ function drawDragonFx(x,o,t){
   }else{
   /* 胴（水面より下は描かない） */
   x.save();
-  x.beginPath();x.rect(0,0,BW,wy);x.clip();
+  x.beginPath();x.rect(0,0,SW,wy);x.clip();
   const edge=(side,shrink)=>{
     x.beginPath();
     for(let i=0;i<N;i++){
@@ -4001,11 +4061,18 @@ function drawDragonFx(x,o,t){
     haBolt(x,src[0],src[1],src[0]+Math.cos(a)*len,src[1]+Math.sin(a)*len,o.seed+i+beat*.37,S0*.035,S0);
   }
   /* 天から落ちる雷 */
-  if(t>.24&&t<.72){
-    for(let i=0;i<3;i++){
-      if(((beat+i*3)%4)!==0)continue;
-      const sx=((Math.sin(o.seed*9+i*4.7+Math.floor(beat/4))*.5+.5))*BW;
-      haBolt(x,sx,-S0*.05,sx+Math.sin(beat+i)*S0*.1,BH*(.45+i*.16),o.seed+i*3+Math.floor(beat/4),S0*.05,S0);
+  if(t>.14&&t<.88){
+    for(let i=0;i<5;i++){
+      if(((beat+i*3)%5)!==0)continue;
+      const sd=Math.floor(beat/5)+i*7;
+      const sx=((Math.sin(o.seed*9+i*4.7+sd)*.5+.5))*SW;
+      const ey=SH*(.35+((i*3+sd)%5)*.14);
+      haBolt(x,sx,SH*.04,sx+Math.sin(beat+i)*S0*.12,ey,o.seed+i*3+sd,S0*.06,S0);
+      x.save();x.globalAlpha=.5;x.strokeStyle="rgba(255,236,240,.9)";
+      x.lineWidth=Math.max(1,S0*.003);
+      boltPath(x,sx,SH*.04,sx+Math.sin(beat+i)*S0*.12,ey,o.seed+i*3+sd,S0*.06);
+      x.restore();
+      if(i===0){x.save();x.globalAlpha=.16;x.fillStyle="#FFE6EA";x.fillRect(0,0,SW,SH);x.restore()}
     }
   }
   /* 火の粉 */
@@ -4034,16 +4101,16 @@ function drawDragonFx(x,o,t){
   if(t>.44&&t<.48){
     const k=(t-.44)/.04;
     x.save();x.globalAlpha=Math.max(0,1-Math.abs(k-.3)*2.6)*.38;
-    x.fillStyle="#FFD9D9";x.fillRect(0,0,BW,BH);x.restore();
+    x.fillStyle="#FFD9D9";x.fillRect(0,0,SW,SH);x.restore();
   }
-  if(t<.035){x.save();x.globalAlpha=(1-t/.035)*.5;x.fillStyle="#FFF0F0";x.fillRect(0,0,BW,BH);x.restore()}
+  if(t<.035){x.save();x.globalAlpha=(1-t/.035)*.5;x.fillStyle="#FFF0F0";x.fillRect(0,0,SW,SH);x.restore()}
   /* 龍 */
-  const na=t<.22?clamp((t-.06)/.16,0,1):t>.78?Math.max(0,(1-t)/.22):1;
+  const na=t<.40?clamp((t-.34)/.06,0,1):t>.60?Math.max(0,1-(t-.60)/.08):1;
   if(na>0){
     x.save();x.globalAlpha=na;x.textAlign="center";x.textBaseline="middle";
     const fs=Math.max(30,S0*.23);
     x.font="900 "+fs.toFixed(0)+"px "+(TFONTS[0]?TFONTS[0].f:"sans-serif");
-    x.translate(BW/2,BH*.52);
+    x.translate(SW/2,SH*.52);
     x.scale(1+(1-na)*.22,1+(1-na)*.22);
     x.globalAlpha=na*.16;x.fillStyle="#FF2B3C";x.fillText("龍",0,0);
     x.globalAlpha=na;
