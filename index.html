@@ -3441,7 +3441,7 @@ function seaSpawn(tier){
     by:isD?.80:(.3+Math.random()*.56),
     hgt:isD?.62:tier==="rare"?.26+Math.random()*.12:.10+Math.random()*.11,
     dist:isD?.68:tier==="rare"?.18+Math.random()*.10:.07+Math.random()*.12,
-    dur:isD?11500:tier==="rare"?2300+Math.random()*800:1000+Math.random()*650,
+    dur:isD?9500:tier==="rare"?2300+Math.random()*800:1000+Math.random()*650,
     t0:performance.now(),seed:Math.random()*99,
     scale:(sp.s||1)*(isD?1:tier==="rare"?1:.85+Math.random()*.4)};
   seaAct.push(o);seaKick();
@@ -3643,10 +3643,11 @@ function drawBody(x,k,c){
     x.fillStyle=c;eye(.46,-.08,.035)}
 }
 /* 龍：覇王色の覇気をまとって海から飛び出す隠し演出 */
+/* 盤面の枠は越えるが、画面からは出きらない高さ・幅にしている */
 const DRAGON_PATH=[
-  [.34,1.42],[.36,1.05],[.30,.80],[.10,.58],[-.22,.40],[-.30,.06],
-  [-.02,-.20],[.36,-.26],[.74,-.12],[1.10,.10],[1.28,.42],[1.06,.70],
-  [.72,.72],[.44,.56],[.16,.66],[.14,.98],[.34,1.24],[.44,1.55]];
+  [.34,1.44],[.36,1.04],[.26,.76],[.09,.52],[.05,.26],[.22,.07],
+  [.52,.04],[.80,.16],[.94,.42],[.82,.66],[.54,.72],[.28,.60],
+  [.16,.38],[.32,.20],[.60,.30],[.68,.58],[.52,.84],[.42,1.14],[.46,1.52]];
 function curveAt(pts,u){
   const n=pts.length-1,f=clamp(u,0,1)*n,i=Math.min(n-1,Math.floor(f)),s=f-i;
   const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n,i+2)];
