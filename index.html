@@ -166,7 +166,11 @@ button{cursor:pointer}
 .selring.mark{stroke-dasharray:22 14;animation:selmarch 1.35s linear infinite}
 @keyframes selmarch{from{stroke-dashoffset:0}to{stroke-dashoffset:-36}}
 @media (prefers-reduced-motion:reduce){.selring.mark{animation:none}}
-.mode-live .no{display:none}
+.mode-live .no,.preview .no{display:none}
+.preview #selRings{display:none}
+.preview #ttl.on:hover::after{content:none}
+.preview .marquee{display:none}
+#btnPrev.on{background:var(--pink-wash);color:var(--pink-deep)}
 .piece.follower{pointer-events:none}
 .no{font-family:var(--mono);fill:rgba(255,255,255,.6)}
 
@@ -570,6 +574,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
 .cur-bar i{background:linear-gradient(90deg,#FF9AC6,#FF4E9B)}
 .stat b{color:var(--plum);font-family:var(--ui);font-weight:800;font-size:18px}
 .stat .open-c{color:var(--mint)}
+.stat .left-c{color:var(--pink-deep)}
 .progress{background:var(--edge);height:7px}
 .progress i{background:linear-gradient(90deg,#FF9AC6,#FF4E9B)}
 .log{color:var(--plum-soft);font-family:var(--ui);font-weight:600;font-size:11.5px}
@@ -604,6 +609,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     </div>
     <div class="spacer"></div>
     <span class="saved" id="saved">自動保存</span>
+    <button class="tbtn ghost" id="btnPrev">本番の見た目</button>
     <button class="tbtn ghost" id="btnSolo">盤面だけ</button>
     <button class="tbtn ghost" id="btnFull">全画面</button>
     <div class="menuwrap">
@@ -642,6 +648,15 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
             <button class="chip" data-v="1000" aria-pressed="true">1000</button>
             <button class="chip" data-v="10000">10000</button>
             <input class="chip-free" id="freeStep" type="number" min="1" placeholder="任意">
+            <div class="menuwrap">
+              <button class="tbtn ghost" id="stepEdit" title="加算量を自分で決める" style="padding:6px 9px">⚙</button>
+              <div class="menu" id="stepMenu" hidden style="width:230px">
+                <div class="eyebrow" style="padding:4px 8px 6px">加算量のボタン</div>
+                <input type="text" id="stepList" placeholder="1,10,100,1000,10000">
+                <p class="hint" style="margin:7px 2px 8px">カンマ区切りで5個まで。よく投げられるギフトの値を入れておくと速いです。</p>
+                <button class="tbtn" id="stepApply" style="width:100%">この並びにする</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="stat" style="gap:5px">
@@ -656,6 +671,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="stat"><div class="eyebrow">開封</div>
           <b><span class="open-c" id="statOpen">0</span> / <span id="statAll">0</span></b></div>
         <div class="stat"><div class="eyebrow">受取合計</div><b id="statSum">0</b></div>
+        <div class="stat"><div class="eyebrow">あと</div><b id="statLeft" class="left-c">0</b></div>
         <div class="stat" style="gap:5px"><div class="eyebrow">進捗</div>
           <div class="progress"><i id="bar" style="width:0%"></i></div></div>
         <label class="toggle" style="white-space:nowrap"><input type="checkbox" id="clickAdd">クリックで直接加算</label>
@@ -1293,7 +1309,7 @@ const DEF=()=>({
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
   style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
-  bg:"dark",step:1000,editStep:1,fxBurst:true,zoom:1,
+  bg:"dark",step:1000,steps:[1,10,100,1000,10000],editStep:1,fxBurst:true,zoom:1,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
   title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
     color:"#FFFFFF",edge:7,edgeColor:"#FF57A0",edge2:true,edge2Color:"#FFFFFF",
@@ -2067,6 +2083,22 @@ function paintCur(){
   $("curBar").style.width=(cur.need?Math.min(100,cur.got/cur.need*100):0)+"%";
   $("btnPlus").disabled=false;$("btnMinus").disabled=cur.got<=0;
 }
+function drawSteps(){
+  const arr=(S.steps&&S.steps.length?S.steps:[1,10,100,1000,10000]).slice(0,5);
+  const box=$("chips");
+  [...box.querySelectorAll(".chip")].forEach(c=>c.remove());
+  const free=$("freeStep");
+  arr.slice().reverse().forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip";b.dataset.v=v;b.textContent=fmt(v);
+    b.setAttribute("aria-pressed",+v===+S.step);
+    box.insertBefore(b,box.firstChild);
+  });
+  void free;
+  if(arr.indexOf(+S.step)<0){S.step=arr[arr.length-1];
+    const b=box.querySelector(`.chip[data-v="${S.step}"]`);if(b)b.setAttribute("aria-pressed","true")}
+  stepLabels();
+}
 function stepLabels(){
   const v=fmt(step());$("plusV").textContent=v;$("minusV").textContent=v;
 }
@@ -2074,6 +2106,7 @@ function paintStats(){
   const v=counted(),op=v.filter(p=>p.open).length;
   $("statOpen").textContent=op;$("statAll").textContent=v.length;
   $("statSum").textContent=fmt(v.reduce((a,p)=>a+p.got,0));
+  $("statLeft").textContent=fmt(v.reduce((a,p)=>a+Math.max(0,(p.need||0)-(p.got||0)),0));
   $("bar").style.width=(v.length?op/v.length*100:0)+"%";
 }
 let cmpTimers=[],cmpDone=false;
@@ -3040,6 +3073,10 @@ function setSolo(on){
   applyBg();requestAnimationFrame(layout);setTimeout(layout,120);
 }
 $("btnSolo").onclick=()=>setSolo(!document.body.classList.contains("solo"));
+$("btnPrev").onclick=()=>{
+  const on=$("app").classList.toggle("preview");
+  $("btnPrev").classList.toggle("on",on);
+};
 $("soloExit").onclick=()=>setSolo(false);
 $("vidSound").onchange=()=>{S.vidSound=$("vidSound").checked;$("rvid").muted=!S.vidSound;
   if(S.vidSound)$("rvid").play().catch(()=>{});save()};
@@ -3412,6 +3449,18 @@ function foldSections(){
   });
 }
 $("btnMenu").onclick=e=>{e.stopPropagation();$("fileMenu").hidden=!$("fileMenu").hidden};
+$("stepEdit").onclick=e=>{e.stopPropagation();
+  $("stepList").value=(S.steps||[1,10,100,1000,10000]).join(",");
+  $("stepMenu").hidden=!$("stepMenu").hidden};
+$("stepMenu").addEventListener("click",e=>e.stopPropagation());
+$("stepApply").onclick=()=>{
+  const a=$("stepList").value.split(/[,\s、]+/).map(v=>Math.round(+v))
+    .filter(v=>v>0&&isFinite(v)).slice(0,5);
+  if(!a.length)return;
+  S.steps=a.sort((x,y)=>x-y);
+  $("stepMenu").hidden=true;drawSteps();save();
+};
+document.addEventListener("click",()=>{const m=$("stepMenu");if(m&&!m.hidden)m.hidden=true});
 document.addEventListener("click",()=>{const m=$("fileMenu");if(m&&!m.hidden)m.hidden=true});
 $("fileMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("fileMenu").hidden=true});
 
@@ -3452,7 +3501,7 @@ function syncUI(){
   $("vOpa").textContent=Math.round(st.pOpa*100)+"%";
   $("vBw").textContent=st.bWidth;$("vFs").textContent=Number(st.fSize).toFixed(1);
   $("vIc").textContent=Number(st.icSize==null?1:st.icSize).toFixed(1);
-  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",+c.dataset.v===S.step));
+  drawSteps();
 }
 function seed(){
   S=DEF();S.img.reveal=sampleImage();
