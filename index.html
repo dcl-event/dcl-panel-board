@@ -111,7 +111,10 @@ button{cursor:pointer}
 .stkList button{width:54px;height:54px;padding:0;border-radius:10px;overflow:hidden;
   border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer}
 .stkList button[aria-pressed="true"]{border-color:var(--pink-deep);box-shadow:0 0 0 3px var(--pink-wash)}
+.stkList button{position:relative}
 .stkList img{max-width:100%;max-height:100%;object-fit:contain}
+.stkNo{position:absolute;right:2px;bottom:1px;font-size:10px;font-style:normal;font-weight:800;
+  line-height:1;padding:2px 4px;border-radius:6px;background:rgba(20,16,26,.72);color:#fff}
 #ttl{position:absolute;z-index:19;display:none;width:max-content;max-width:88%;text-align:center;
   transform:translate(-50%,-50%);white-space:pre-wrap;line-height:1.25;pointer-events:none}
 #ttl.on{display:block;pointer-events:auto;cursor:move}
@@ -657,6 +660,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     </div>
     <div class="spacer"></div>
     <span class="saved" id="saved">自動保存</span>
+    <button class="tbtn ghost sq" id="btnUndo2" title="1つ戻す（⌘Z）" disabled>↩</button>
+    <button class="tbtn ghost sq" id="btnRedo" title="1つ進む（⇧⌘Z）" disabled>↪</button>
     <button class="tbtn ghost" id="btnRail" aria-pressed="false" title="配信中でも設定をいじれます">設定</button>
     <button class="tbtn ghost" id="btnPrev">本番の見た目</button>
     <button class="tbtn ghost" id="btnSolo">盤面だけ</button>
@@ -1417,7 +1422,7 @@ const DEF=()=>({
   ar:4/3
 });
 const GOLD="#F5B33C";
-let S=DEF(),sel=new Set(),undoStack=[],logs=[],cur=null,selTab="a";
+let S=DEF(),sel=new Set(),undoStack=[],redoStack=[],logs=[],cur=null,selTab="a";
 let revealImg=new Image(),coverImg=null;
 
 function sampleImage(){
@@ -2091,6 +2096,12 @@ function render(keepInspector){
     defs.appendChild(cp);
   });
   S.pieces.forEach((p,i)=>{
+    if(!p.bc&&!(p.bwm&&p.bwm!==1))return;      // 当たり枠だけ
+    const cp=el("clipPath",{id:"ec"+i});
+    cp.appendChild(el("path",{d:p.d}));
+    defs.appendChild(cp);
+  });
+  S.pieces.forEach((p,i)=>{
     if(p.open||!p.fx||p.fx==="none")return;
     const cp=el("clipPath",{id:"fxc"+i});
     cp.appendChild(el("path",{d:p.d}));
@@ -2119,7 +2130,8 @@ function render(keepInspector){
     const g=el("g",{class:"piece"+((shown&&!litMode)?" is-open":"")+(lit?" lit":"")+(sel.has(p)?" sel":"")+(p.glow?" glow":"")+(p.follow?" follower":""),"data-i":i});
     if(p.glow)g.setAttribute("style","--gc:"+fxOf(p));
     const path=el("path",{d:p.d,fill:lit?litC:(p.pc||baseFill),"fill-opacity":st.pOpa,
-      stroke:lit?litC:(p.bc||st.bColor),"stroke-width":st.bWidth*(p.bwm||1),
+      stroke:lit?litC:(p.bc||st.bColor),
+      "stroke-width":st.bWidth*(p.bc||p.bwm!==1?1:1)*(p.bwm||1),
       "stroke-linejoin":"round",class:"face"});
     if(lit)g.setAttribute("style","--lc:"+litC);
     if(p.clip)path.setAttribute("clip-path","url(#pc"+i+")");
@@ -2187,6 +2199,19 @@ function render(keepInspector){
     p._g=g;
     (p.cut&&gCut?gCut:gTop).appendChild(g);
   });
+  /* 当たり枠は隣のマスや盤面のふちに食われないよう、内側に描いていちばん上に重ねる */
+  const gEdge=el("g",{id:"goldEdges","pointer-events":"none"});
+  S.pieces.forEach((p,i)=>{
+    if(!p.bc&&!(p.bwm&&p.bwm!==1))return;
+    if(litMode&&p.open)return;
+    const w=st.bWidth*(p.bwm||1);
+    if(w<=0)return;
+    const e=el("path",{d:p.d,fill:"none",stroke:p.bc||st.bColor,
+      "stroke-width":w*2,"stroke-linejoin":"round","clip-path":"url(#ec"+i+")"});
+    if(p.cut&&S.cut)e.setAttribute("mask","url(#cutmask)");
+    gEdge.appendChild(e);
+  });
+  if(gEdge.childNodes.length)svg.appendChild(gEdge);
   svg.appendChild(el("g",{id:"selRings"}));
   svg.appendChild(el("path",{id:"curRingBg"}));
   const ring=el("path",{id:"curRing"});svg.appendChild(ring);
@@ -3254,18 +3279,37 @@ function addLog(p,d,opened){
   if(logs.length>12)logs.shift();
   $("log").innerHTML=logs.slice(-3).join("");
 }
+const snapNow=()=>JSON.stringify({pattern:S.pattern,opt:S.opt,pieces:S.pieces.map(pick)});
 function pushUndo(){
-  undoStack.push(JSON.stringify({pattern:S.pattern,opt:S.opt,pieces:S.pieces.map(pick)}));
+  undoStack.push(snapNow());
   if(undoStack.length>120)undoStack.shift();
+  redoStack.length=0;
+  syncUndoUI();
 }
-function doUndo(){
-  const s=undoStack.pop();if(!s)return;
-  const p=JSON.parse(s);
+function restoreSnap(str){
+  const p=JSON.parse(str);
   S.pattern=p.pattern;S.opt=p.opt;
   rebuild();
   const by={};p.pieces.forEach(q=>by[q.k]=q);
   S.pieces.forEach(q=>applyTo(q,by[q.k]));
   drawPatterns();patOpts();render();save();
+  syncUndoUI();
+}
+function doUndo(){
+  const s=undoStack.pop();if(!s)return;
+  redoStack.push(snapNow());
+  if(redoStack.length>120)redoStack.shift();
+  restoreSnap(s);
+}
+function doRedo(){
+  const s=redoStack.pop();if(!s)return;
+  undoStack.push(snapNow());
+  restoreSnap(s);
+}
+function syncUndoUI(){
+  [["btnUndo2",undoStack],["btnRedo",redoStack],["btnUndo",undoStack]].forEach(([id,st])=>{
+    const b=$(id);if(b)b.disabled=!st.length;
+  });
 }
 
 /* ============ controls ============ */
@@ -3336,6 +3380,8 @@ $("stage").addEventListener("wheel",ev=>{
   }
 },{passive:false});
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
+$("btnUndo2").onclick=()=>{doUndo();paintCur()};
+$("btnRedo").onclick=()=>{doRedo();paintCur()};
 
 [["pColor","pColor","v"],["pOpa","pOpa","n"],["bColor","bColor","v"],["bWidth","bWidth","n"],
  ["fColor","fColor","v"],["fWeight","fWeight","v"],["fSize","fSize","n"],["icSize","icSize","n"],["litColor","litColor","v"],["selColor","selColor","v"],["fEdge","fEdge","c"],["fEdgeColor","fEdgeColor","v"],
@@ -4447,7 +4493,7 @@ function stkUI(){
   const box=$("stkThumbs");if(!box)return;
   const arr=stkList();
   box.innerHTML=arr.length
-    ? arr.map(t=>`<button data-id="${t.id}" aria-pressed="${t.id===stkCur}" title="選ぶ"><img src="${t.src}" alt=""></button>`).join("")
+    ? arr.map((t,i)=>`<button data-id="${t.id}" aria-pressed="${t.id===stkCur}" title="${i+1}枚目（数が大きいほど手前）"><img src="${t.src}" alt=""><i class="stkNo">${i+1}</i></button>`).join("")
     : `<span class="hint" style="margin:0">まだありません。「画像を追加」から。</span>`;
   const t=arr.find(q=>q.id===stkCur)||null;
   $("stkEdit").hidden=!t;
@@ -4456,6 +4502,9 @@ function stkUI(){
     $("stkR").value=t.rot||0;$("vStkR").textContent=Math.round(t.rot||0)+"°";
     $("stkO").value=t.op==null?1:t.op;$("vStkO").textContent=Math.round((t.op==null?1:t.op)*100)+"%";
     $("stkBehind").checked=!!t.back;
+    const at=arr.findIndex(q=>q.id===t.id);
+    $("stkBwd").disabled=at<=0;
+    $("stkFwd").disabled=at>=arr.length-1;
     const idx=arr.findIndex(q=>q.id===t.id);
     $("stkMsg").textContent="重なり順："+(idx+1)+" / "+arr.length+"（数が大きいほど手前）"
       +(t.back?" ／ マスの後ろ":"");
@@ -4819,7 +4868,12 @@ $("btnPng").onclick=()=>{
 };
 
 document.addEventListener("keydown",e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){e.preventDefault();doUndo();return}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){
+    e.preventDefault();
+    if(e.shiftKey)doRedo();else doUndo();
+    paintCur();return;
+  }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="y"){e.preventDefault();doRedo();paintCur();return}
   if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   if(e.key==="Escape"){
     if(document.body.classList.contains("solo")){setSolo(false);return}
@@ -4946,7 +5000,7 @@ drawFrames();drawTitleFonts();drawPanelFonts();
 $("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
-syncUI();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();
+syncUI();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
 seaSchedule();
 (function(){/* 隠しコマンド：fish＝魚 / big＝大物 / ryu＝龍 */
   let buf="";
