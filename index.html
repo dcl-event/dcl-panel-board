@@ -912,8 +912,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <button class="tbtn" id="bulkSeq">連番ラベル</button>
           <button class="tbtn" id="bulkNeedLabel">必要数をラベルに</button>
           <button class="tbtn" id="bulkBlank">ラベル消す</button>
+          <button class="tbtn" id="bulkDefault">もとの名前に戻す</button>
         </div>
-        <p class="hint">対象は選択中のパネル。未選択なら全パネル。<br>盤面のマスを<b style="color:var(--muted)">ダブルクリック</b>すると、その場で文字を打てます。</p>
+        <p class="hint">対象は選択中のパネル。未選択なら全パネル。<br>「もとの名前に戻す」で、47都道府県なら<b style="color:var(--muted)">県名</b>、ほかの割り方なら必要数の数字に戻ります。<br>盤面のマスを<b style="color:var(--muted)">ダブルクリック</b>すると、その場で文字を打てます。</p>
       </div>
 
       <div class="sect">
@@ -4658,6 +4659,9 @@ $("bulkNeedGo").onclick=()=>{
 $("bulkSeq").onclick=()=>{pushUndo();targets().forEach((p,i)=>{p.label=String(i+1);p.auto=false});render();save()};
 $("bulkNeedLabel").onclick=()=>{pushUndo();targets().forEach(p=>{p.label=String(p.need);p.auto=true});render();save()};
 $("bulkBlank").onclick=()=>{pushUndo();targets().forEach(p=>{p.label="";p.auto=false});render();save()};
+$("bulkDefault").onclick=()=>{pushUndo();
+  targets().forEach(p=>{p.auto=!p.dl;p.label=p.dl||String(p.need)});
+  render();save()};
 
 $("dropReveal").onclick=e=>{
   if(e.target.id==="rmReveal"||e.target.id==="eyeReveal")return;
