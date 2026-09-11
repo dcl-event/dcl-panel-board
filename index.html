@@ -660,10 +660,10 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           </div>
         </div>
         <div class="stat" style="gap:5px">
-          <div class="eyebrow">表示サイズ</div>
+          <div class="eyebrow" title="トラックパッドの2本指ピンチでも拡大・縮小、拡大中は2本指スクロールで動かせます">表示サイズ ⓘ</div>
           <div class="stepper">
             <button id="zoomOut">−</button>
-            <span class="numv" id="zoomVal" title="クリックで100%に戻す" style="cursor:pointer">100%</span>
+            <span class="numv" id="zoomVal" title="クリックで100%（位置も中央）に戻す" style="cursor:pointer">100%</span>
             <button id="zoomIn">＋</button>
           </div>
         </div>
@@ -1799,6 +1799,13 @@ function applyImages(){
 
 /* ============ board layout ============ */
 let BW=0,BH=0;
+const PAN={x:0,y:0};
+let applyShift=()=>{};
+function clampPan(){
+  const st=$("stage");
+  const mx=Math.max(0,(BW-st.clientWidth)/2+30),my=Math.max(0,(BH-st.clientHeight)/2+30);
+  PAN.x=clamp(PAN.x,-mx,mx);PAN.y=clamp(PAN.y,-my,my);
+}
 function layout(){
   const st=$("stage"),b=$("board");
   const z=S.zoom||1;
@@ -1812,10 +1819,11 @@ function layout(){
   BW=Math.round(w);BH=Math.round(h);
   b.style.transform="";
   b.style.width=BW+"px";b.style.height=BH+"px";
+  let shiftX=0,shiftY=0;
   renderFrame();renderTitle();
   // タイトルを盤面の外に置いたら、その分だけ盤面を引いて全部が収まるようにする
   const tt=S.title||{};
-  if(tt.on){
+  if(tt.on&&(S.zoom||1)<=1){
     const el2=$("ttl");
     for(let i=0;i<8;i++){
       if(!el2.classList.contains("on"))break;
@@ -1837,11 +1845,16 @@ function layout(){
         const uL=Math.min(br.left,tr.left),uR=Math.max(br.right,tr.right);
         const dy=(sr.top+sr.bottom)/2-(uT+uB)/2;
         const dx=(sr.left+sr.right)/2-(uL+uR)/2;
-        if(Math.abs(dx)>.5||Math.abs(dy)>.5)
-          b.style.transform="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px)";
+        shiftX=dx;shiftY=dy;
       }
     }
   }
+  applyShift=()=>{
+    clampPan();
+    const tx=shiftX+PAN.x,ty=shiftY+PAN.y;
+    b.style.transform=(tx||ty)?"translate("+tx.toFixed(1)+"px,"+ty.toFixed(1)+"px)":"";
+  };
+  applyShift();
   b.style.backgroundImage=(S.pattern!=="japan"&&S.img.reveal&&S.img.revealKind!=="video")
     ?`url(${S.img.reveal})`:"none";
   $("rvid").hidden=S.pattern==="japan"?true:(S.img.revealKind!=="video"||!$("rvid").getAttribute("src"));
@@ -2641,6 +2654,12 @@ function patOpts(){
   if(S.pattern==="radial")h+=stepRow("sectors",o.sectors,2,24,"分割数");
   if(S.pattern==="rings")h+=stepRow("rings",o.rings,2,10,"リング数");
   if(S.pattern==="jigsaw")h+=`<div class="btnrow" style="margin-top:8px"><button class="tbtn" id="reseed">形をシャッフル</button></div>`;
+  if(S.pattern==="japan"){
+    h+=`<div class="row"><label>地図の色</label><input type="color" id="jpFill" value="${S.style.pColor}"></div>
+      <div class="row"><label>地図のふち</label><input type="color" id="jpEdge" value="${S.style.bColor}"></div>
+      <div class="row"><label>埋まった色</label><input type="color" id="jpLit" value="${S.style.litColor||"#FFD34D"}"></div>
+      <p class="hint">47都道府県ぜんぶまとめて変わります（個別に塗った色も戻ります）。</p>`;
+  }
   box.innerHTML=h;
 
   box.querySelectorAll(".stp").forEach(b=>b.onclick=()=>{
@@ -2655,6 +2674,16 @@ function patOpts(){
       i.dataset.u==="deg"?Math.round(i.value)+"°":Math.round(i.value*100)+"%"};
     i.oninput=()=>{show();setOpt(i.dataset.k,+i.value,true)};
     i.onchange=()=>{show();setOpt(i.dataset.k,+i.value)};
+  });
+  [["jpFill","pColor","pc"],["jpEdge","bColor","bc"],["jpLit","litColor",null]].forEach(([id,key,per])=>{
+    const e=$(id);if(!e)return;
+    e.addEventListener("input",()=>{
+      S.style[key]=e.value;
+      if(per)S.pieces.forEach(q=>q[per]=null);
+      const m=$(key);if(m)m.value=e.value;
+      if(window.repaintColors)repaintColors();
+      render();save();
+    });
   });
   const ctr=$("shpCenter");
   if(ctr)ctr.onclick=()=>{pushUndo();S.opt.cx=.5;S.opt.cy=.5;S.opt.rot=0;
@@ -3048,14 +3077,29 @@ $("freeStep").addEventListener("input",()=>{
 });
 $("btnPlus").onclick=()=>{if(cur)hitPiece(cur,1)};
 $("btnMinus").onclick=()=>{if(cur)hitPiece(cur,-1)};
-function setZoom(v){
-  S.zoom=clamp(+v.toFixed(2),.4,1.6);
+function setZoom(v,keepPan){
+  S.zoom=clamp(+(+v).toFixed(3),.3,4);
+  if(!keepPan&&S.zoom<=1){PAN.x=0;PAN.y=0}
   $("zoomVal").textContent=Math.round(S.zoom*100)+"%";
   layout();save();
 }
-$("zoomIn").onclick=()=>setZoom((S.zoom||1)+.05);
-$("zoomOut").onclick=()=>setZoom((S.zoom||1)-.05);
-$("zoomVal").onclick=()=>setZoom(1);
+$("zoomIn").onclick=()=>setZoom((S.zoom||1)*1.15);
+$("zoomOut").onclick=()=>setZoom((S.zoom||1)/1.15);
+$("zoomVal").onclick=()=>{PAN.x=0;PAN.y=0;setZoom(1)};
+/* トラックパッド：2本指ピンチ＝拡大縮小 ／ 2本指スクロール＝盤面を動かす */
+$("stage").addEventListener("wheel",ev=>{
+  if(ev.ctrlKey||ev.metaKey){
+    ev.preventDefault();
+    const sr=$("stage").getBoundingClientRect();
+    const cx=ev.clientX-(sr.left+sr.width/2),cy=ev.clientY-(sr.top+sr.height/2);
+    const old=S.zoom||1,next=clamp(old*Math.exp(-ev.deltaY*0.0035),.3,4),r=next/old;
+    PAN.x=cx+(PAN.x-cx)*r;PAN.y=cy+(PAN.y-cy)*r;
+    setZoom(next,true);
+  }else if((S.zoom||1)>1){
+    ev.preventDefault();
+    PAN.x-=ev.deltaX;PAN.y-=ev.deltaY;applyShift();save();
+  }
+},{passive:false});
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
 
 [["pColor","pColor","v"],["pOpa","pOpa","n"],["bColor","bColor","v"],["bWidth","bWidth","n"],
