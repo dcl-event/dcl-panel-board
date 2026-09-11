@@ -228,8 +228,9 @@ button{cursor:pointer}
 .bigbtn.minus:hover{border-color:var(--minus);background:#26161C}
 .bigbtn:active{transform:translateY(1px)}
 .bigbtn[disabled]{opacity:.3;cursor:default;transform:none}
-#curRing{fill:none;stroke:var(--gold);stroke-width:9;stroke-dasharray:26 16;
+#curRing{fill:none;stroke:var(--selc,#F5B33C);stroke-width:9;stroke-dasharray:26 16;
   pointer-events:none;animation:march 1.1s linear infinite}
+#curRingBg{fill:none;stroke:var(--selh,#16181F);stroke-width:15;pointer-events:none;opacity:.75}
 @keyframes march{to{stroke-dashoffset:-42}}
 .stat{display:flex;flex-direction:column;line-height:1.15}
 .stat b{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -847,6 +848,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="row"><label></label><span class="hint" id="fwNote" style="margin:0"></span></div>
         <div class="row"><label>文字サイズ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
         <div class="row"><label>ギフト画像</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
+        <div class="row"><label>選択枠の色</label><input type="color" id="selColor" value="#F5B33C">
+          <span class="hint" style="margin:0;flex:1">配信中に選んだパネルを囲む色</span></div>
         <div class="row"><label>点灯の色</label><input type="color" id="litColor" value="#FFD34D">
           <span class="hint" style="margin:0;flex:1">47都道府県で埋まったマスの色</span></div>
         <div class="row"><label>文字のフチ</label>
@@ -1308,7 +1311,7 @@ const DEF=()=>({
   pattern:"center",
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
-  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
+  style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",selColor:"#F5B33C",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
   bg:"dark",step:1000,steps:[1,10,100,1000,10000],editStep:1,fxBurst:true,zoom:1,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
   title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
@@ -2027,6 +2030,7 @@ function render(keepInspector){
     (p.cut&&gCut?gCut:gTop).appendChild(g);
   });
   svg.appendChild(el("g",{id:"selRings"}));
+  svg.appendChild(el("path",{id:"curRingBg"}));
   const ring=el("path",{id:"curRing"});svg.appendChild(ring);
   // shrink any line that came out wider than its panel
   fitList.forEach(f=>{
@@ -2061,14 +2065,27 @@ function setCur(p){cur=p||null;paintCur()}
 function paintCur(){
   const ring=$("curRing"),card=$("cursel");
   if(cur&&S.pieces.indexOf(cur)<0)cur=null;
+  const sc=(S.style||{}).selColor||"#F5B33C";
+  $("svg").style.setProperty("--selc",sc);
+  $("svg").style.setProperty("--selh",lum(sc)>.5?"#16181F":"#FFFFFF");
   if(!cur||cur.open||isEdit()){
     if(ring)ring.removeAttribute("d");
+    const b0=$("curRingBg");if(b0)b0.removeAttribute("d");
     card.classList.add("none");
     $("curNo").textContent="—";
     $("curLabel").textContent=cur&&cur.open?"開封ずみ — 次のパネルを選ぶ":"パネルをクリックして選ぶ";
     $("curCount").textContent="— / —";$("curBar").style.width="0%";
     $("btnPlus").disabled=$("btnMinus").disabled=true;
     return;
+  }
+  const bg=$("curRingBg");
+  if(bg){
+    if(!cur||cur.open||isEdit())bg.removeAttribute("d");
+    else{
+      bg.setAttribute("d",cur.d);
+      if(cur.cut)bg.setAttribute("mask","url(#cutmask)");else bg.removeAttribute("mask");
+      if(cur.clip)bg.setAttribute("clip-path","url(#pc"+cur.i+")");else bg.removeAttribute("clip-path");
+    }
   }
   if(ring){
     ring.setAttribute("d",cur.d);
@@ -3042,7 +3059,7 @@ $("zoomVal").onclick=()=>setZoom(1);
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
 
 [["pColor","pColor","v"],["pOpa","pOpa","n"],["bColor","bColor","v"],["bWidth","bWidth","n"],
- ["fColor","fColor","v"],["fWeight","fWeight","v"],["fSize","fSize","n"],["icSize","icSize","n"],["litColor","litColor","v"],["fEdge","fEdge","c"],["fEdgeColor","fEdgeColor","v"],
+ ["fColor","fColor","v"],["fWeight","fWeight","v"],["fSize","fSize","n"],["icSize","icSize","n"],["litColor","litColor","v"],["selColor","selColor","v"],["fEdge","fEdge","c"],["fEdgeColor","fEdgeColor","v"],
  ["showCount","showCount","c"],["showNo","showNo","c"]].forEach(([id,key,kind])=>{
   $(id).addEventListener("input",()=>{
     const e=$(id);
@@ -3494,6 +3511,7 @@ function syncUI(){
   $("zoomVal").textContent=Math.round((S.zoom||1)*100)+"%";
   $("icSize").value=st.icSize==null?1:st.icSize;
   $("litColor").value=st.litColor||"#FFD34D";
+  $("selColor").value=st.selColor||"#F5B33C";
   drawPanelFonts();syncWeightUI();
   $("fEdge").checked=st.fEdge!==false;$("fEdgeColor").value=st.fEdgeColor||"#000000";
   repaintColors();
