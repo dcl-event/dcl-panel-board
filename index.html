@@ -880,7 +880,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <p class="hint" id="ovrNote" style="margin:0 0 8px"></p>
         <div class="row"><label>不透明度</label><input type="range" id="pOpa" min="0" max="1" step="0.05" value="1"><span class="val" id="vOpa">100%</span></div>
         <div class="row"><label>枠線</label><input type="color" id="bColor" value="#0F1016"></div>
-        <div class="row"><label>枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="1" value="6"><span class="val" id="vBw">6</span></div>
+        <div class="row"><label>枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="0.5" value="6"><span class="val" id="vBw">6</span></div>
         <div class="row"><label>文字色</label><input type="color" id="fColor" value="#FFFFFF"></div>
         <div class="row" style="align-items:flex-start"><label style="padding-top:6px">文字の書体</label>
           <div class="fonts grow" id="pFonts"></div></div>
@@ -2755,6 +2755,10 @@ function patOpts(){
       <div class="row"><label></label><span class="hint" style="margin:0">波は横にゆっくり流れます。</span></div>
       <div class="row"><label>地図の色</label><input type="color" id="jpFill" value="${S.style.pColor}"></div>
       <div class="row"><label>地図のふち</label><input type="color" id="jpEdge" value="${S.style.bColor}"></div>
+      <div class="row"><label>ふちの太さ</label>
+        <input type="range" id="jpBw" min="0" max="12" step="0.5" value="${S.style.bWidth}">
+        <span class="val" id="vJpBw">${Number(S.style.bWidth).toFixed(1)}</span></div>
+      <div class="row"><label></label><span class="hint" style="margin:0">大阪など小さい県の文字が隠れるときは細くしてください。</span></div>
       <div class="row"><label>埋まった色</label><input type="color" id="jpLit" value="${S.style.litColor||"#FFD34D"}"></div>
       <p class="hint">47都道府県ぜんぶまとめて変わります（個別に塗った色も戻ります）。</p>`;
   }
@@ -2772,6 +2776,13 @@ function patOpts(){
       i.dataset.u==="deg"?Math.round(i.value)+"°":Math.round(i.value*100)+"%"};
     i.oninput=()=>{show();setOpt(i.dataset.k,+i.value,true)};
     i.onchange=()=>{show();setOpt(i.dataset.k,+i.value)};
+  });
+  const jbw=$("jpBw");
+  if(jbw)jbw.addEventListener("input",()=>{
+    S.style.bWidth=+jbw.value;
+    $("vJpBw").textContent=Number(S.style.bWidth).toFixed(1);
+    $("bWidth").value=S.style.bWidth;$("vBw").textContent=Number(S.style.bWidth).toFixed(1);
+    render();save();
   });
   const seaSel=$("jpSea");
   if(seaSel){
@@ -3227,7 +3238,7 @@ $("btnUndo").onclick=()=>{doUndo();paintCur()};
     const e=$(id);
     S.style[key]=kind==="n"?+e.value:kind==="c"?e.checked:e.value;
     $("vOpa").textContent=Math.round(S.style.pOpa*100)+"%";
-    $("vBw").textContent=S.style.bWidth;
+    $("vBw").textContent=Number(S.style.bWidth).toFixed(1);
     $("vFs").textContent=Number(S.style.fSize).toFixed(1);
     $("vIc").textContent=Number(S.style.icSize==null?1:S.style.icSize).toFixed(1);
     render();save();
@@ -3807,7 +3818,7 @@ function syncUI(){
   repaintColors();
   $("showCount").checked=st.showCount;$("showNo").checked=st.showNo;
   $("vOpa").textContent=Math.round(st.pOpa*100)+"%";
-  $("vBw").textContent=st.bWidth;$("vFs").textContent=Number(st.fSize).toFixed(1);
+  $("vBw").textContent=Number(st.bWidth).toFixed(1);$("vFs").textContent=Number(st.fSize).toFixed(1);
   $("vIc").textContent=Number(st.icSize==null?1:st.icSize).toFixed(1);
   drawSteps();
 }
