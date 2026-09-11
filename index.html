@@ -56,7 +56,7 @@ button{cursor:pointer}
 .main{flex:1;display:flex;min-height:0}
 .stagewrap{flex:1;min-width:0;display:flex;flex-direction:column;
   background:radial-gradient(120% 90% at 50% 0%,#1A1C27 0%,var(--stage) 55%,#0E0F16 100%)}
-.stage{flex:1;min-height:0;display:grid;place-items:center;padding:22px;position:relative}
+.stage{flex:1;min-height:0;display:grid;place-items:center;padding:22px;position:relative;overflow:hidden}
 .stage[data-bg="green"]{background:#00B140}
 .bg-alpha.mode-live .stagewrap,.bg-alpha.mode-live .stage,
 .solo,.solo .stagewrap,.solo .stage{background:transparent!important}
@@ -642,6 +642,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
             <button class="chip" data-v="1000" aria-pressed="true">1000</button>
             <button class="chip" data-v="10000">10000</button>
             <input class="chip-free" id="freeStep" type="number" min="1" placeholder="任意">
+          </div>
+        </div>
+        <div class="stat" style="gap:5px">
+          <div class="eyebrow">表示サイズ</div>
+          <div class="stepper">
+            <button id="zoomOut">−</button>
+            <span class="numv" id="zoomVal" title="クリックで100%に戻す" style="cursor:pointer">100%</span>
+            <button id="zoomIn">＋</button>
           </div>
         </div>
         <button class="tbtn" id="btnUndo">1つ戻す</button>
@@ -1284,7 +1292,7 @@ const DEF=()=>({
   opt:{cols:4,rows:3,shape:"heart",size:.62,cx:.5,cy:.5,rot:0,split:1,sectors:8,rings:4,seed:7,merges:[]},
   pieces:[],cut:null,icons:{},
   style:{pColor:"#1B1F2E",pOpa:1,bColor:"#0F1016",bWidth:6,fColor:"#FFFFFF",fWeight:"900",fFont:0,fSize:1,icSize:1,litColor:"#FFD34D",fEdge:true,fEdgeColor:"#000000",showCount:true,showNo:true},
-  bg:"dark",step:1000,editStep:1,fxBurst:true,
+  bg:"dark",step:1000,editStep:1,fxBurst:true,zoom:1,
   frame:{kind:"none",color:"#FF57A0",glow:"soft",size:1},
   title:{on:false,text:"開けたら…な写真が…",font:0,size:1,x:.5,y:.16,boxEdge:"double",
     color:"#FFFFFF",edge:7,edgeColor:"#FF57A0",edge2:true,edge2Color:"#FFFFFF",
@@ -1773,7 +1781,8 @@ function applyImages(){
 let BW=0,BH=0;
 function layout(){
   const st=$("stage"),b=$("board");
-  const aw=st.clientWidth-44,ah=st.clientHeight-44;
+  const z=S.zoom||1;
+  const aw=(st.clientWidth-44)*z,ah=(st.clientHeight-44)*z;
   if(aw<=0||ah<=0)return;
   const ar=boardAR();
   const fr=S.frame||{};
@@ -2981,6 +2990,14 @@ $("freeStep").addEventListener("input",()=>{
 });
 $("btnPlus").onclick=()=>{if(cur)hitPiece(cur,1)};
 $("btnMinus").onclick=()=>{if(cur)hitPiece(cur,-1)};
+function setZoom(v){
+  S.zoom=clamp(+v.toFixed(2),.4,1.6);
+  $("zoomVal").textContent=Math.round(S.zoom*100)+"%";
+  layout();save();
+}
+$("zoomIn").onclick=()=>setZoom((S.zoom||1)+.05);
+$("zoomOut").onclick=()=>setZoom((S.zoom||1)-.05);
+$("zoomVal").onclick=()=>setZoom(1);
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
 
 [["pColor","pColor","v"],["pOpa","pOpa","n"],["bColor","bColor","v"],["bWidth","bWidth","n"],
@@ -3417,6 +3434,7 @@ function syncUI(){
   $("frSize").value=fr.size==null?1:fr.size;
   $("vFr").textContent=Number(fr.size==null?1:fr.size).toFixed(1);
   $("fxBurst").checked=S.fxBurst!==false;
+  $("zoomVal").textContent=Math.round((S.zoom||1)*100)+"%";
   $("icSize").value=st.icSize==null?1:st.icSize;
   $("litColor").value=st.litColor||"#FFD34D";
   drawPanelFonts();
