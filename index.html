@@ -80,6 +80,11 @@ button{cursor:pointer}
 #rvid[hidden]{display:none}
 #cvid{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
 #ccv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none}
+#inlineEdit{position:absolute;z-index:28;display:none;resize:none;box-sizing:border-box;
+  text-align:center;font-family:var(--ptf,inherit);font-weight:800;line-height:1.15;
+  color:#fff;background:rgba(12,14,22,.88);border:2px dashed var(--pink,#FF7BB5);
+  border-radius:8px;padding:2px 4px;outline:none;overflow:hidden;caret-color:#FF7BB5}
+#inlineEdit.on{display:block}
 #dragfx{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:25}
 #dragfx.on{display:block}
 #seafx{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:16}
@@ -653,7 +658,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
   <div class="main">
     <div class="stagewrap">
       <div class="stage" id="stage" data-bg="dark">
-        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="seafx"></canvas><div id="stk"></div><canvas id="fxcv"></canvas></div>
+        <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><svg id="svg"></svg><canvas id="seafx"></canvas><div id="stk"></div><textarea id="inlineEdit" spellcheck="false"></textarea><canvas id="fxcv"></canvas></div>
         <canvas id="dragfx"></canvas>
       </div>
       <div class="livebar">
@@ -881,7 +886,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <button class="tbtn" id="bulkNeedLabel">必要数をラベルに</button>
           <button class="tbtn" id="bulkBlank">ラベル消す</button>
         </div>
-        <p class="hint">対象は選択中のパネル。未選択なら全パネル。</p>
+        <p class="hint">対象は選択中のパネル。未選択なら全パネル。<br>盤面のマスを<b style="color:var(--muted)">ダブルクリック</b>すると、その場で文字を打てます。</p>
       </div>
 
       <div class="sect">
@@ -2021,6 +2026,7 @@ function seaLayer(H){
   return g;
 }
 function render(keepInspector){
+  if(inlineP)closeInline(false);
   syncFollowers();
   const H=vh(),st=S.style,svg=$("svg");
   const pf=TFONTS[st.fFont||0]||TFONTS[0];
@@ -3374,6 +3380,45 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
   if(p==="soft"){T.edge=10;T.edgeColor="#FFFFFF";T.edge2=false;T.color="#FF57A0";T.drop=true}
   if(p==="none"){T.edge=0;T.edge2=false;T.drop=false}
   syncTitleUI();renderTitle();save();
+});
+/* ============ パネルをダブルクリックしてその場で文字を打つ ============ */
+let inlineP=null;
+function openInline(p){
+  if(!isEdit()||!p)return;
+  const el=$("inlineEdit"),bb=dBox(p),H=vh();
+  const sx=BW/VW,sy=BH/H;
+  const w=Math.max(46,bb.w*sx-8),h=Math.max(26,bb.h*sy-8);
+  el.style.left=(bb.x*sx+4)+"px";el.style.top=(bb.y*sy+4)+"px";
+  el.style.width=w+"px";el.style.height=h+"px";
+  el.style.fontSize=Math.max(11,Math.min(h*.42,p.r*.20*S.style.fSize*(p.tS==null?1:p.tS)*sy))+"px";
+  el.style.fontFamily=($("svg").style.getPropertyValue("--ptf")||"inherit");
+  el.value=p.label||"";
+  el.classList.add("on");
+  inlineP=p;
+  setTimeout(()=>{el.focus();el.select()},0);
+}
+function closeInline(commit){
+  const el=$("inlineEdit");
+  if(!inlineP){el.classList.remove("on");return}
+  const p=inlineP;inlineP=null;
+  el.classList.remove("on");
+  if(commit&&el.value!==(p.label||"")){
+    pushUndo();p.label=el.value;p.auto=false;
+    render(true);paintSel();save();
+  }
+}
+$("inlineEdit").addEventListener("keydown",ev=>{
+  ev.stopPropagation();
+  if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();closeInline(true)}
+  else if(ev.key==="Escape"){ev.preventDefault();closeInline(false)}
+});
+$("inlineEdit").addEventListener("blur",()=>closeInline(true));
+$("svg").addEventListener("dblclick",ev=>{
+  if(!isEdit())return;
+  const g=ev.target.closest&&ev.target.closest(".piece");
+  if(!g)return;
+  ev.preventDefault();ev.stopPropagation();
+  openInline(S.pieces[+g.dataset.i]);
 });
 /* ============ 海の生きもの（たまに跳ねる） ============ */
 const FISH_C=[
