@@ -2787,13 +2787,15 @@ function patOpts(){
       <div class="row"><label></label><span class="hint" style="margin:0">波は横にゆっくり流れます。魚は数十秒に1匹、大物はめったに出ません。</span></div>
       <div class="row"><label>地図の色</label><input type="color" id="jpFill" value="${S.style.pColor}"></div>
       <div class="row"><label>地図のふち</label><input type="color" id="jpEdge" value="${S.style.bColor}"></div>
-      <div class="row"><label>ふちの太さ</label>
-        <input type="range" id="jpBw" min="0" max="12" step="0.5" value="${S.style.bWidth}">
-        <span class="val" id="vJpBw">${Number(S.style.bWidth).toFixed(1)}</span></div>
-      <div class="row"><label></label><span class="hint" style="margin:0">大阪など小さい県の文字が隠れるときは細くしてください。</span></div>
       <div class="row"><label>埋まった色</label><input type="color" id="jpLit" value="${S.style.litColor||"#FFD34D"}"></div>
       <p class="hint">47都道府県ぜんぶまとめて変わります（個別に塗った色も戻ります）。</p>`;
   }
+  h+=`<div class="row" style="margin-top:2px"><label>ふちの太さ</label>
+      <input type="range" id="jpBw" min="0" max="24" step="0.5" value="${S.style.bWidth}">
+      <span class="val" id="vJpBw">${Number(S.style.bWidth).toFixed(1)}</span></div>`;
+  h+=S.pattern==="japan"
+    ? `<div class="row"><label></label><span class="hint" style="margin:0">大阪など小さい県の文字が隠れるときは細くしてください。</span></div>`
+    : `<div class="row"><label></label><span class="hint" style="margin:0">「見た目」の枠の太さと同じ値です。割り方ごとには分かれません。</span></div>`;
   box.innerHTML=h;
 
   box.querySelectorAll(".stp").forEach(b=>b.onclick=()=>{
