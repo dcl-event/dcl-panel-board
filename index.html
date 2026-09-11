@@ -221,7 +221,8 @@ button{cursor:pointer}
 .complete.show{opacity:1;
   background:radial-gradient(62% 62% at 50% 50%,var(--cc-wash,rgba(245,179,60,.24)),transparent 72%)}
 .complete span{font-family:"M PLUS Rounded 1c",var(--sans);font-weight:800;
-  font-size:clamp(34px,9vw,120px);letter-spacing:.03em;line-height:1;color:#fff;white-space:nowrap;
+  font-size:var(--cfs,clamp(34px,9vw,120px));letter-spacing:.03em;line-height:1;color:#fff;
+  white-space:nowrap;margin-right:.1em;
   text-shadow:0 0 3px rgba(0,0,0,.35),0 6px 0 var(--cc-deep,#C98A1E),
               0 12px 26px rgba(0,0,0,.35),0 0 46px var(--cc,#F5B33C)}
 .complete.show span{animation:cmpPop .72s cubic-bezier(.2,1.5,.35,1) both,
@@ -2358,7 +2359,17 @@ function playComplete(){
     d.style.setProperty("--cc-deep",deep);
     d.style.setProperty("--cc-wash",main+"3D");
     $("board").appendChild(d);
-    frameTick(()=>d.classList.add("show"));
+    /* 盤面からはみ出さない大きさにして、真ん中に置く */
+    const sp=d.querySelector("span");
+    d.style.setProperty("--cfs",Math.round(Math.min(BW*.17,BH*.30))+"px");
+    frameTick(()=>{
+      const w=sp.getBoundingClientRect().width,lim=BW*.90;
+      if(w>lim){
+        const now=parseFloat(getComputedStyle(sp).fontSize);
+        d.style.setProperty("--cfs",Math.floor(now*lim/w)+"px");
+      }
+      d.classList.add("show");
+    });
     cmpTimers.push(setTimeout(playCannon,300));
     cmpTimers.push(setTimeout(()=>{                    // 数秒で引っ込む
       d.classList.remove("show");
