@@ -286,6 +286,8 @@ button{cursor:pointer}
 .sect+.sect{border-top:1px solid var(--line-soft)}
 .sect h3{margin:0;font-size:11.5px;letter-spacing:.14em;color:var(--muted);font-family:var(--mono);
   text-transform:uppercase;font-weight:400}
+.sect h3 small{display:block;margin-top:3px;font-size:10.5px;letter-spacing:.02em;
+  text-transform:none;color:var(--muted);opacity:.8}
 .sect-head{display:flex;align-items:center;gap:9px;padding:13px 0;cursor:pointer;user-select:none;
   transition:color .15s}
 .sect-head:hover{color:var(--text)}
@@ -466,6 +468,9 @@ button,input,select,textarea{font-family:var(--ui)}
 .sect-head:hover{background:var(--pink-wash)}
 .sect h3{font-family:var(--ui);font-size:13.5px;font-weight:800;letter-spacing:.01em;
   color:var(--plum);text-transform:none}
+.sect h3 small{display:block;margin-top:2px;font-size:11px;font-weight:500;
+  color:var(--muted);letter-spacing:0;line-height:1.4;opacity:1}
+.sect-head:hover h3 small{color:var(--muted)}
 .sect-head:hover h3{color:var(--pink-deep)}
 .dot{width:28px;height:28px;border-radius:9px;background:var(--pink-wash);opacity:1;
   display:grid;place-items:center;color:var(--pink-deep)}
@@ -716,7 +721,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
 
     <aside class="rail" id="rail">
       <div class="sect">
-        <h3>画像</h3>
+        <h3>下に隠す画像／動画<small>開けたら出てくる絵と、パネル自体の絵</small></h3>
         <button class="drop" id="dropReveal">
           <span class="thumb" id="thReveal">＋</span>
           <span class="t"><b>公開用の画像／動画</b><span id="nmReveal">サンプル画像</span></span>
@@ -736,7 +741,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect closed" id="cmdSect">
-        <h3>裏コマンド</h3>
+        <h3>裏コマンド（自分用）<small>演出を手で呼び出して確かめる</small></h3>
         <div class="row">
           <input id="cmdIn" class="grow" placeholder="ryu / big / fish / カジキ …" autocomplete="off">
           <button class="tbtn" id="cmdGo">実行</button>
@@ -754,7 +759,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect">
-        <h3>貼り付け画像</h3>
+        <h3>盤面に貼る画像<small>ロゴなどを好きな位置・大きさで重ねる</small></h3>
         <div class="btnrow" style="margin-bottom:8px">
           <button class="tbtn" id="stkPick">＋ 画像を追加</button>
         </div>
@@ -774,17 +779,17 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect">
-        <h3>割り方</h3>
+        <h3>パネルの分け方<small>何マスに割るか・形・地図の色</small></h3>
         <div class="patterns" id="patterns"></div>
         <div id="patOpts" style="margin-top:12px"></div>
       </div>
 
       <div class="sect">
-        <h3>フレーム</h3>
+        <h3>盤面のまわりの飾り枠<small>盤面の外側を囲む装飾</small></h3>
         <div class="frames" id="frames"></div>
-        <div class="row" style="margin-top:11px"><label>フレーム色</label>
+        <div class="row" style="margin-top:11px"><label>飾り枠の色</label>
           <input type="color" id="frColor" value="#FF57A0"></div>
-        <div class="row"><label>光り方</label>
+        <div class="row"><label>飾り枠の光り方</label>
           <select id="frGlow" class="grow">
             <option value="none">なし</option>
             <option value="soft">ふんわり光る</option>
@@ -798,57 +803,57 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect">
-        <h3>タイトル</h3>
+        <h3>タイトル文字<small>盤面に重ねる見出しとその箱</small></h3>
         <div class="row"><label></label>
           <label class="toggle"><input type="checkbox" id="tOn">タイトルを出す</label>
         </div>
-        <div class="row" style="align-items:flex-start"><label style="padding-top:8px">文字</label>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:8px">見出しの文</label>
           <textarea id="tText" class="grow" placeholder="開けたら…な写真が…"></textarea></div>
         <div class="row" id="tEmoRow"><label></label><div class="grow"></div></div>
-        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">書体</label>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">タイトルの書体</label>
           <div class="fonts grow" id="tFonts"></div></div>
-        <div class="row"><label>大きさ</label>
+        <div class="row"><label>タイトルの大きさ</label>
           <input type="range" id="tSize" min="0.2" max="2.5" step="0.02" value="1">
           <span class="val" id="vTSz">1.0</span></div>
-        <div class="row"><label>よこ位置</label>
+        <div class="row"><label>タイトルのよこ位置</label>
           <input type="range" id="tX" min="-0.4" max="1.4" step="0.005" value="0.5">
           <span class="val" id="vTX2">50%</span></div>
-        <div class="row"><label>たて位置</label>
+        <div class="row"><label>タイトルのたて位置</label>
           <input type="range" id="tY" min="-0.4" max="1.4" step="0.005" value="0.16">
           <span class="val" id="vTY2">12%</span></div>
-        <div class="row"><label>文字色</label><input type="color" id="tColor" value="#FFFFFF"></div>
-        <div class="row"><label>ふち</label>
+        <div class="row"><label>タイトルの文字の色</label><input type="color" id="tColor" value="#FFFFFF"></div>
+        <div class="row"><label>文字のふち</label>
           <div class="btnrow grow">
             <button class="tbtn" data-ep="sticker">シール</button>
             <button class="tbtn" data-ep="candy">キャンディ</button>
             <button class="tbtn" data-ep="soft">ふんわり</button>
             <button class="tbtn" data-ep="none">なし</button>
           </div></div>
-        <div class="row"><label>外ふち色</label><input type="color" id="tEdgeColor" value="#FF57A0"></div>
-        <div class="row"><label>内ふち</label>
+        <div class="row"><label>文字の外ふちの色</label><input type="color" id="tEdgeColor" value="#FF57A0"></div>
+        <div class="row"><label>文字の内ふち</label>
           <label class="toggle"><input type="checkbox" id="tEdge2" checked>二重にする</label></div>
-        <div class="row"><label>内ふち色</label>
+        <div class="row"><label>文字の内ふちの色</label>
           <input type="color" id="tEdge2Color" value="#FFFFFF"></div>
-        <div class="row"><label>ふちの太さ</label>
+        <div class="row"><label>文字のふちの太さ</label>
           <input type="range" id="tEdge" min="0" max="20" step="0.5" value="7">
           <span class="val" id="vTEd">7</span></div>
         <div class="row"><label></label>
           <label class="toggle"><input type="checkbox" id="tDrop" checked>下に影をつける</label></div>
-        <div class="row"><label>光り方</label>
+        <div class="row"><label>文字の光り方</label>
           <select id="tGlow" class="grow">
             <option value="none">なし</option>
             <option value="soft">ふんわり光る</option>
             <option value="pulse">ゆっくり明滅</option>
           </select></div>
-        <div class="row"><label>光の色</label><input type="color" id="tGlowColor" value="#FF57A0"></div>
-        <div class="row"><label>箱の色</label><input type="color" id="tBox" value="#3B2A38"></div>
-        <div class="row"><label>箱の濃さ</label>
+        <div class="row"><label>文字の光の色</label><input type="color" id="tGlowColor" value="#FF57A0"></div>
+        <div class="row"><label>うしろの箱の色</label><input type="color" id="tBox" value="#3B2A38"></div>
+        <div class="row"><label>うしろの箱の濃さ</label>
           <input type="range" id="tBoxA" min="0" max="1" step="0.05" value="0">
           <span class="val" id="vTBa">0%</span></div>
-        <div class="row"><label>箱の角丸</label>
+        <div class="row"><label>うしろの箱の角丸</label>
           <input type="range" id="tBoxR" min="0" max="40" step="1" value="16">
           <span class="val" id="vTBr">16</span></div>
-        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">箱の枠</label>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">箱のふちの形</label>
           <div class="btnrow grow" style="flex-wrap:wrap" id="tBoxEdges">
             <button class="tbtn" data-be="none">なし</button>
             <button class="tbtn" data-be="solid">ふつう</button>
@@ -865,20 +870,20 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
             <button class="tbtn" data-be="stitch">ステッチ</button>
             <button class="tbtn" data-be="bubble">ふきだし</button>
           </div></div>
-        <div class="row"><label>枠の色</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
-        <div class="row"><label>枠の太さ</label>
+        <div class="row"><label>箱のふちの色</label><input type="color" id="tBoxLine" value="#FFFFFF"></div>
+        <div class="row"><label>箱のふちの太さ</label>
           <input type="range" id="tBoxLW" min="0" max="14" step="0.5" value="4">
           <span class="val" id="vTBw">4</span></div>
         <p class="hint">編集モードでは盤面の上を<b>ドラッグして動かせます</b>。</p>
       </div>
 
       <div class="sect" id="selSect">
-        <h3>選択中のパネル</h3>
+        <h3>選んだマスの中身<small>必要数・文字・ギフト画像（そのマスだけ）</small></h3>
         <div id="selBody"></div>
       </div>
 
       <div class="sect">
-        <h3>一括設定</h3>
+        <h3>マスにまとめて入力<small>選んだマス（未選択なら全部）へ一気に</small></h3>
         <div class="row">
           <label>必要数</label>
           <input id="bulkNeed" type="number" min="0" placeholder="例 1000" class="grow">
@@ -893,9 +898,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect">
-        <h3>見た目</h3>
-        <div class="row"><label>パネル色</label><input type="color" id="pColor" value="#1B1F2E"></div>
-        <div class="row"><label>よく使う色</label>
+        <h3>マス全体の見た目<small>全マス共通の色・文字・サイズ</small></h3>
+        <div class="row"><label>マスの色</label><input type="color" id="pColor" value="#1B1F2E"></div>
+        <div class="row"><label>マスの色（見本）</label>
           <div class="swatches" id="pSwatch">
             <button data-c="#1B1F2E" style="background:#1B1F2E"></button>
             <button data-c="#F5B33C" style="background:#F5B33C"></button>
@@ -909,34 +914,34 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <button class="tbtn" id="unifyEdge">枠の色を統一</button>
         </div>
         <p class="hint" id="ovrNote" style="margin:0 0 8px"></p>
-        <div class="row"><label>不透明度</label><input type="range" id="pOpa" min="0" max="1" step="0.05" value="1"><span class="val" id="vOpa">100%</span></div>
-        <div class="row"><label>枠線</label><input type="color" id="bColor" value="#0F1016"></div>
-        <div class="row"><label>枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="0.5" value="6"><span class="val" id="vBw">6</span></div>
-        <div class="row"><label>文字色</label><input type="color" id="fColor" value="#FFFFFF"></div>
-        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">文字の書体</label>
+        <div class="row"><label>マスの透け具合</label><input type="range" id="pOpa" min="0" max="1" step="0.05" value="1"><span class="val" id="vOpa">100%</span></div>
+        <div class="row"><label>マスの枠の色</label><input type="color" id="bColor" value="#0F1016"></div>
+        <div class="row"><label>マスの枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="0.5" value="6"><span class="val" id="vBw">6</span></div>
+        <div class="row"><label>マスの文字の色</label><input type="color" id="fColor" value="#FFFFFF"></div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">マスの文字の書体</label>
           <div class="fonts grow" id="pFonts"></div></div>
-        <div class="row"><label>文字の太さ</label>
+        <div class="row"><label>マスの文字の太さ</label>
           <select id="fWeight" class="grow"><option value="500">通常</option><option value="700">太字</option><option value="900" selected>極太</option></select>
         </div>
         <div class="row"><label></label><span class="hint" id="fwNote" style="margin:0"></span></div>
-        <div class="row"><label>文字サイズ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
-        <div class="row"><label>ギフト画像</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
-        <div class="row"><label>選択枠の色</label><input type="color" id="selColor" value="#F5B33C"></div>
+        <div class="row"><label>マスの文字の大きさ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
+        <div class="row"><label>ギフト画像の大きさ</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
+        <div class="row"><label>選んだマスを囲む色</label><input type="color" id="selColor" value="#F5B33C"></div>
         <div class="row"><label></label><span class="hint" style="margin:0">配信中に選んだパネルを囲む色</span></div>
-        <div class="row"><label>点灯の色</label><input type="color" id="litColor" value="#FFD34D"></div>
+        <div class="row"><label>埋まったマスが光る色</label><input type="color" id="litColor" value="#FFD34D"></div>
         <div class="row"><label></label><span class="hint" style="margin:0">47都道府県で、埋まったマスが光る色</span></div>
-        <div class="row"><label>文字のフチ</label>
+        <div class="row"><label>マスの文字のフチ</label>
           <label class="toggle"><input type="checkbox" id="fEdge" checked>つける</label>
         </div>
-        <div class="row"><label>フチの色</label><input type="color" id="fEdgeColor" value="#000000"></div>
-        <div class="row"><label>開いたとき</label>
+        <div class="row"><label>マスの文字のフチの色</label><input type="color" id="fEdgeColor" value="#000000"></div>
+        <div class="row"><label>マスが開いたとき</label>
           <label class="toggle"><input type="checkbox" id="fxBurst" checked>形を降らせる</label>
         </div>
         <div class="row" style="gap:14px">
           <label class="toggle"><input type="checkbox" id="showCount" checked>カウンタ表示</label>
           <label class="toggle"><input type="checkbox" id="showNo" checked>番号表示</label>
         </div>
-        <div class="row"><label>背景</label>
+        <div class="row"><label>盤面のうしろ</label>
           <select id="bgSel" class="grow">
             <option value="dark">暗幕（作業用）</option>
             <option value="green">クロマキー緑（OBS）</option>
@@ -946,7 +951,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
 
       <div class="sect">
-        <h3>使い方</h3>
+        <h3>使い方とショートカット<small>操作の一覧</small></h3>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -4728,7 +4733,7 @@ document.addEventListener("keydown",e=>{
 
 /* ---------- collapsible sections & the file menu ---------- */
 function foldSections(){
-  const open0=[1,1,1,0,1,0,0,0];
+  const open0=[1,0,0,1,0,0,1,0,1,0];
   document.querySelectorAll(".rail .sect").forEach((sec,i)=>{
     const h=sec.querySelector("h3");
     if(!h||sec.dataset.fold)return;
@@ -4737,6 +4742,8 @@ function foldSections(){
     head.className="sect-head";head.tabIndex=0;
     const ICONS=[
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2 4 4"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><circle cx="9.5" cy="12" r="2"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><path d="M17.2 13.6c1.6 1.4 3.8 3 3.8 4.8a2.6 2.6 0 0 1-5.2.3 2.6 2.6 0 0 1-5.2-.3c0-1.8 2.2-3.4 3.8-4.8"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><rect x="6" y="7.5" width="12" height="9" rx="1.5"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>',
@@ -4744,7 +4751,7 @@ function foldSections(){
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h11M4 17h7"/><circle cx="19" cy="15.5" r="2.5"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.5-1.8-.4-1.2.5-2.2 1.8-2.2H18a3 3 0 0 0 3-3c0-5-4-11-9-11z"/><circle cx="8.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10.5" r="1.2" fill="currentColor"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.3"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>'];
-    const TINTS=["#FF57A0","#7C6BFF","#FF8A6B","#F0509B","#25CBAA","#FFB43D","#49B6F5","#B06BFF"];
+    const TINTS=["#FF57A0","#9B6BFF","#FF8A6B","#7C6BFF","#F0509B","#25CBAA","#FFB43D","#49B6F5","#B06BFF","#5CC98F"];
     const dot=document.createElement("span");dot.className="dot";
     dot.innerHTML=ICONS[i]||"";
     dot.style.color=TINTS[i]||"#FF57A0";
