@@ -83,8 +83,7 @@ button{cursor:pointer}
 #fxcv{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:15}
 #ttl{position:absolute;z-index:19;display:none;width:max-content;max-width:88%;text-align:center;
   transform:translate(-50%,-50%);white-space:pre-wrap;line-height:1.25;pointer-events:none}
-#ttl.on{display:block}
-.mode-edit #ttl.on{pointer-events:auto;cursor:move}
+#ttl.on{display:block;pointer-events:auto;cursor:move}
 #ttl span{display:inline-block;padding:.32em .68em;position:relative;z-index:2}
 #ttlDeco{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;
   pointer-events:none;z-index:1;display:none}
@@ -3158,25 +3157,38 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
 (function(){
   const e=$("ttl");let dg=null;
   e.addEventListener("pointerdown",ev=>{
-    if(!isEdit())return;
     ev.preventDefault();ev.stopPropagation();
     const b=$("board").getBoundingClientRect();
-    dg={x:ev.clientX,y:ev.clientY,x0:S.title.x==null?.5:S.title.x,y0:S.title.y==null?.16:S.title.y,w:b.width,h:b.height};
+    dg={x:ev.clientX,y:ev.clientY,x0:S.title.x==null?.5:S.title.x,
+        y0:S.title.y==null?.16:S.title.y,w:b.width,h:b.height,moved:false};
     e.classList.add("dragging");
     try{e.setPointerCapture(ev.pointerId)}catch(err){}
   });
   e.addEventListener("pointermove",ev=>{
     if(!dg)return;
+    if(!dg.moved&&Math.hypot(ev.clientX-dg.x,ev.clientY-dg.y)<5)return;
+    dg.moved=true;
     S.title.x=clamp(dg.x0+(ev.clientX-dg.x)/dg.w,-.4,1.4);
     S.title.y=clamp(dg.y0+(ev.clientY-dg.y)/dg.h,-.4,1.4);
     renderTitle();
   });
-  e.addEventListener("pointerup",()=>{
+  e.addEventListener("pointerup",ev=>{
     e.classList.remove("dragging");
-    if(!dg)return;dg=null;
-    $("tX").value=S.title.x;$("vTX2").textContent=Math.round(S.title.x*100)+"%";
-    $("tY").value=S.title.y;$("vTY2").textContent=Math.round(S.title.y*100)+"%";
-    save();
+    if(!dg)return;
+    const moved=dg.moved;dg=null;
+    if(moved){
+      $("tX").value=S.title.x;$("vTX2").textContent=Math.round(S.title.x*100)+"%";
+      $("tY").value=S.title.y;$("vTY2").textContent=Math.round(S.title.y*100)+"%";
+      save();
+      return;
+    }
+    // 動かさずに離したら、下にあるパネルへ操作を渡す
+    e.style.pointerEvents="none";
+    const under=document.elementFromPoint(ev.clientX,ev.clientY);
+    e.style.pointerEvents="";
+    const pc=under&&under.closest?under.closest(".piece"):null;
+    if(pc)pc.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,
+      clientX:ev.clientX,clientY:ev.clientY,button:0,pointerId:ev.pointerId}));
   });
 })();
 $("frames").addEventListener("click",e=>{
