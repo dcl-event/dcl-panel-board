@@ -724,6 +724,21 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <p class="hint">ドラッグ&amp;ドロップ、<kbd>⌘V</kbd> 貼り付けでも入ります。<b style="color:var(--muted)">どちらも動画（mp4/webm）が置けます</b>。音が出せるのは公開用のほうだけです。</p>
       </div>
 
+      <div class="sect closed" id="cmdSect">
+        <h3>裏コマンド</h3>
+        <div class="row">
+          <input id="cmdIn" class="grow" placeholder="ryu / big / fish / カジキ …" autocomplete="off">
+          <button class="tbtn" id="cmdGo">実行</button>
+        </div>
+        <p class="hint" id="cmdMsg" style="margin:6px 0 0">自分で演出を確かめるための欄です。配信画面（盤面）には出ません。</p>
+        <p class="hint" style="margin:6px 0 0">
+          <b style="color:var(--muted)">ryu</b>＝龍 ／ <b style="color:var(--muted)">big</b>＝大物 ／
+          <b style="color:var(--muted)">fish</b>＝魚 ／ 生きものの名前でその子だけ ／
+          <b style="color:var(--muted)">complete</b>＝コンプリート演出。<br>
+          魚と龍は「割り方＝47都道府県」＋「背景の海＝あり」のときだけ出ます。
+        </p>
+      </div>
+
       <div class="sect">
         <h3>貼り付け画像</h3>
         <div class="btnrow" style="margin-bottom:8px">
@@ -2243,7 +2258,10 @@ function checkComplete(){
   if(cmpDone)return;
   cmpDone=true;
   const wait=S.fxBurst===false?200:2450;               // 降った図形が引ききってから
-  cmpTimers.push(setTimeout(()=>{
+  cmpTimers.push(setTimeout(playComplete,wait));
+}
+function playComplete(){
+  {
     const name=S.pattern==="center"?(S.opt.shape||"heart"):"star";
     const cl=burstColors(name),main=cl[0],deep=cl[cl.length-1];
     const d=document.createElement("div");
@@ -2259,7 +2277,7 @@ function checkComplete(){
       d.classList.remove("show");
       cmpTimers.push(setTimeout(()=>{d.remove();cmpTimers=[]},700));
     },4200));
-  },wait));
+  }
   if(S.img.revealKind==="video"&&S.vidRestart!==false){
     const v=$("rvid");try{v.currentTime=0;v.play().catch(()=>{})}catch(e){}
   }
@@ -3706,6 +3724,36 @@ function drawDragonFx(x,o,t,hx,hy,ang,L){
   x.fillStyle="#FFE08A";x.fillText("龍",BW/2,BH*.93);
   x.restore();
 }
+/* 裏コマンド：自分で演出を確かめる用 */
+function runCmd(raw){
+  const msg=t=>{const m=$("cmdMsg");if(m)m.textContent=t};
+  const v=(raw||"").trim();
+  if(!v)return msg("コマンドを入れてください。");
+  const low=v.toLowerCase();
+  if(/^(complete|comp|コンプ|コンプリート)$/.test(low)){
+    playBurst();setTimeout(playComplete,S.fxBurst===false?200:2450);
+    return msg("コンプリート演出を流しました。");
+  }
+  const seaReady=S.pattern==="japan"&&!!(S.sea||{}).on;
+  const named=[...FISH_R,...FISH_C].find(q=>q.n===v);
+  if(named||/^(ryu|dragon|龍|竜|big|rare|大物|fish|魚)$/.test(low)){
+    if(!seaReady)return msg("「割り方＝47都道府県」にして「背景の海」を出してから、もう一度。");
+    if(named){
+      const tier=FISH_R.indexOf(named)>=0?"rare":"common";
+      seaSpawn(tier);
+      const o=seaAct[seaAct.length-1];if(o){o.sp=named;o.scale=(named.s||1)*(tier==="rare"?1:1.1)}
+      return msg(named.n+" を出しました。");
+    }
+    if(/^(ryu|dragon|龍|竜)$/.test(low)){seaSpawn("dragon");return msg("龍を呼びました。")}
+    if(/^(big|rare|大物)$/.test(low)){seaSpawn("rare");return msg("大物を出しました。")}
+    seaSpawn("common");return msg("魚を出しました。");
+  }
+  msg("わからないコマンドです：" + v);
+}
+$("cmdGo").onclick=()=>runCmd($("cmdIn").value);
+$("cmdIn").addEventListener("keydown",ev=>{
+  if(ev.key==="Enter"){ev.preventDefault();runCmd($("cmdIn").value)}
+});
 /* ============ 貼り付け画像（ステッカー） ============ */
 let stkCur=null;
 function stkList(){return S.stk||(S.stk=[])}
