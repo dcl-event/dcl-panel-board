@@ -279,6 +279,12 @@ button{cursor:pointer}
 .log b{color:var(--muted);font-weight:400}
 .log .up{color:var(--open)}.log .dn{color:var(--minus)}
 
+.railgrip{flex:0 0 7px;cursor:col-resize;position:relative;z-index:22;
+  background:transparent;border:0;padding:0;touch-action:none}
+.railgrip::before{content:"";position:absolute;left:2px;top:0;bottom:0;width:3px;border-radius:3px;
+  background:var(--line);opacity:.55;transition:opacity .15s,background .15s}
+.railgrip:hover::before,.railgrip.on::before{opacity:1;background:var(--pink,#FF57A0)}
+.mode-live:not(.show-rail) .railgrip{display:none}
 .rail{flex:0 0 328px;border-left:1px solid var(--line);overflow-y:auto;padding-bottom:56px;
   background:linear-gradient(180deg,#20233200 0,#00000000 260px),var(--surface)}
 .rail::-webkit-scrollbar{width:10px}
@@ -289,6 +295,9 @@ button{cursor:pointer}
 .mode-edit #btnRail{display:none}
 .mode-live .livebar{display:flex}
 .mode-edit .livebar{display:none}
+.grp{padding:16px 18px 4px;font-size:10.5px;letter-spacing:.16em;font-weight:800;
+  color:var(--muted);opacity:.75;text-transform:none}
+.grp+.sect{border-top:0}
 .sect{padding:0 18px}
 @keyframes sectflash{0%{background:transparent}18%{background:var(--pink-wash,rgba(255,87,160,.16))}100%{background:transparent}}
 .sect.flash{animation:sectflash 1s ease}
@@ -734,8 +743,15 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       </div>
     </div>
 
+    <div class="railgrip" id="railGrip" title="ドラッグで設定の幅を変える／ダブルクリックで既定に戻す"></div>
     <aside class="rail" id="rail">
-      <div class="sect">
+      <div class="grp">① つくる</div>
+      <div class="sect" data-k="pattern">
+        <h3>パネルの分け方<small>何マスに割るか・形・地図の色</small></h3>
+        <div class="patterns" id="patterns"></div>
+        <div id="patOpts" style="margin-top:12px"></div>
+      </div>
+      <div class="sect" data-k="hidden">
         <h3>下に隠す画像／動画<small>開けたら出てくる絵と、パネル自体の絵</small></h3>
         <button class="drop" id="dropReveal">
           <span class="thumb" id="thReveal">＋</span>
@@ -755,73 +771,81 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         </div>
         <p class="hint">ドラッグ&amp;ドロップ、<kbd>⌘V</kbd> 貼り付けでも入ります。<b style="color:var(--muted)">どちらも動画（mp4/webm）が置けます</b>。音が出せるのは公開用のほうだけです。</p>
       </div>
-
-      <div class="sect closed" id="cmdSect">
-        <h3>裏コマンド（自分用）<small>演出を手で呼び出して確かめる</small></h3>
+      <div class="grp">② マスの中身</div>
+      <div class="sect" data-k="piece" id="selSect">
+        <h3>選んだマスの中身<small>必要数・文字・ギフト画像（そのマスだけ）</small></h3>
+        <div id="selBody"></div>
+      </div>
+      <div class="sect" data-k="bulk">
+        <h3>マスにまとめて入力<small>選んだマス（未選択なら全部）へ一気に</small></h3>
         <div class="row">
-          <input id="cmdIn" class="grow" placeholder="ryu / big / fish / カジキ …" autocomplete="off">
-          <button class="tbtn" id="cmdGo">実行</button>
+          <label>必要数</label>
+          <input id="bulkNeed" type="number" min="0" placeholder="例 1000" class="grow">
+          <button class="tbtn" id="bulkNeedGo">適用</button>
         </div>
-        <div class="btnrow" style="margin-top:6px">
-          <button class="tbtn" id="cmdRand" style="flex:1">🎲 ランダムで出す</button>
+        <div class="btnrow">
+          <button class="tbtn" id="bulkSeq">連番ラベル</button>
+          <button class="tbtn" id="bulkNeedLabel">必要数をラベルに</button>
+          <button class="tbtn" id="bulkBlank">ラベル消す</button>
+          <button class="tbtn" id="bulkDefault">もとの名前に戻す</button>
         </div>
-        <p class="hint" id="cmdMsg" style="margin:6px 0 0">自分で演出を確かめるための欄です。配信画面（盤面）には出ません。</p>
-        <p class="hint" style="margin:6px 0 0">
-          <b style="color:var(--muted)">ryu</b>＝龍 ／ <b style="color:var(--muted)">big</b>＝大物 ／
-          <b style="color:var(--muted)">fish</b>＝魚 ／ 生きものの名前でその子だけ ／
-          <b style="color:var(--muted)">complete</b>＝コンプリート演出。<br>
-          魚と龍は「割り方＝47都道府県」＋「背景の海＝あり」のときだけ出ます。
-        </p>
+        <p class="hint">対象は選択中のパネル。未選択なら全パネル。<br>「もとの名前に戻す」で、47都道府県なら<b style="color:var(--muted)">県名</b>、ほかの割り方なら必要数の数字に戻ります。<br>盤面のマスを<b style="color:var(--muted)">ダブルクリック</b>すると、その場で文字を打てます。</p>
       </div>
-
-      <div class="sect">
-        <h3>盤面に貼る画像<small>ロゴなどを好きな位置・大きさで重ねる</small></h3>
-        <div class="btnrow" style="margin-bottom:8px">
-          <button class="tbtn" id="stkPick">＋ 画像を追加</button>
-        </div>
-        <input type="file" id="stkFile" accept="image/*" multiple hidden>
-        <div class="stkList" id="stkThumbs"></div>
-        <div id="stkEdit" hidden style="margin-top:10px">
-          <div class="row"><label>大きさ</label><input type="range" id="stkW" min="0.03" max="1.6" step="0.01" value="0.28"><span class="val" id="vStkW">28%</span></div>
-          <div class="row"><label>回転</label><input type="range" id="stkR" min="-180" max="180" step="1" value="0"><span class="val" id="vStkR">0°</span></div>
-          <div class="row"><label>透明度</label><input type="range" id="stkO" min="0.05" max="1" step="0.05" value="1"><span class="val" id="vStkO">100%</span></div>
-          <div class="row"><label>重なり</label>
-            <button class="tbtn" id="stkBwd">奥へ</button>
-            <button class="tbtn" id="stkFwd">手前へ</button>
+      <div class="grp">③ 見た目・飾り</div>
+      <div class="sect" data-k="look">
+        <h3>マス全体の見た目<small>全マス共通の色・文字・サイズ</small></h3>
+        <div class="row"><label>マスの色</label><input type="color" id="pColor" value="#1B1F2E"></div>
+        <div class="row"><label>マスの色（見本）</label>
+          <div class="swatches" id="pSwatch">
+            <button data-c="#1B1F2E" style="background:#1B1F2E"></button>
+            <button data-c="#F5B33C" style="background:#F5B33C"></button>
+            <button data-c="#E8447A" style="background:#E8447A"></button>
+            <button data-c="#3EA7F0" style="background:#3EA7F0"></button>
+            <button data-c="#FFFFFF" style="background:#FFFFFF"></button>
           </div>
-          <div class="row"><label></label>
-            <label class="toggle"><input type="checkbox" id="stkBehind">マスの後ろに置く</label></div>
-          <p class="hint" id="stkMsg" style="margin:2px 0 6px"></p>
-          <div class="btnrow"><button class="tbtn" id="stkDel">削除</button></div>
         </div>
-        <p class="hint">盤面の上でドラッグして移動、ピンクの丸をドラッグで拡大縮小。盤面の外にも出せます。配信タブでは固定されるので、パネルのクリックを邪魔しません。<br>「マスの後ろ」にすると、すぐマスの裏に回ります。選んでいる間は<b style="color:var(--muted)">うっすらピンクの「つかむ枠」</b>が手前に出るので、それをドラッグすれば動かせます。</p>
-      </div>
-
-      <div class="sect">
-        <h3>パネルの分け方<small>何マスに割るか・形・地図の色</small></h3>
-        <div class="patterns" id="patterns"></div>
-        <div id="patOpts" style="margin-top:12px"></div>
-      </div>
-
-      <div class="sect">
-        <h3>盤面のまわりの飾り枠<small>盤面の外側を囲む装飾</small></h3>
-        <div class="frames" id="frames"></div>
-        <div class="row" style="margin-top:11px"><label>飾り枠の色</label>
-          <input type="color" id="frColor" value="#FF57A0"></div>
-        <div class="row"><label>飾り枠の光り方</label>
-          <select id="frGlow" class="grow">
-            <option value="none">なし</option>
-            <option value="soft">ふんわり光る</option>
-            <option value="pulse">ゆっくり明滅</option>
-            <option value="flow">虹色に流れる</option>
+        <div class="btnrow" style="margin:-2px 0 8px">
+          <button class="tbtn" id="unifyFill">マスの色を統一</button>
+          <button class="tbtn" id="unifyEdge">枠の色を統一</button>
+        </div>
+        <p class="hint" id="ovrNote" style="margin:0 0 8px"></p>
+        <div class="row"><label>マスの透け具合</label><input type="range" id="pOpa" min="0" max="1" step="0.05" value="1"><span class="val" id="vOpa">100%</span></div>
+        <div class="row"><label>マスの枠の色</label><input type="color" id="bColor" value="#0F1016"></div>
+        <div class="row"><label>マスの枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="0.5" value="6"><span class="val" id="vBw">6</span></div>
+        <div class="row"><label>マスの文字の色</label><input type="color" id="fColor" value="#FFFFFF"></div>
+        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">マスの文字の書体</label>
+          <div class="fonts grow" id="pFonts"></div></div>
+        <div class="row"><label>マスの文字の太さ</label>
+          <select id="fWeight" class="grow"><option value="500">通常</option><option value="700">太字</option><option value="900" selected>極太</option></select>
+        </div>
+        <div class="row"><label></label><span class="hint" id="fwNote" style="margin:0"></span></div>
+        <div class="row"><label>マスの文字の大きさ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
+        <div class="row"><label>ギフト画像の大きさ</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
+        <div class="row"><label>選んだマスを囲む色</label><input type="color" id="selColor" value="#F5B33C"></div>
+        <div class="row"><label></label><span class="hint" style="margin:0">配信中に選んだパネルを囲む色</span></div>
+        <div class="row"><label>埋まったマスが光る色</label><input type="color" id="litColor" value="#FFD34D"></div>
+        <div class="row"><label></label><span class="hint" style="margin:0">47都道府県で、埋まったマスが光る色</span></div>
+        <div class="row"><label>マスの文字のフチ</label>
+          <label class="toggle"><input type="checkbox" id="fEdge" checked>つける</label>
+        </div>
+        <div class="row"><label>マスの文字のフチの色</label><input type="color" id="fEdgeColor" value="#000000"></div>
+        <div class="row"><label>マスが開いたとき</label>
+          <label class="toggle"><input type="checkbox" id="fxBurst" checked>形を降らせる</label>
+        </div>
+        <div class="row"><label></label>
+          <label class="toggle"><input type="checkbox" id="showCount" checked>受取カウンタを出す（0 / 1,000）</label></div>
+        <div class="row"><label></label>
+          <label class="toggle"><input type="checkbox" id="showNo" checked>マスの番号を出す</label></div>
+        <div class="row"><label></label><span class="hint" style="margin:0">番号はもともと配信タブ・全画面では出ません（編集中の目印です）。</span></div>
+        <div class="row"><label>盤面のうしろ</label>
+          <select id="bgSel" class="grow">
+            <option value="dark">暗幕（作業用）</option>
+            <option value="green">クロマキー緑（OBS）</option>
+            <option value="checker">透明（OBS用）</option>
           </select>
         </div>
-        <div class="row"><label>太さ</label>
-          <input type="range" id="frSize" min="0.5" max="2" step="0.05" value="1">
-          <span class="val" id="vFr">1.0</span></div>
       </div>
-
-      <div class="sect">
+      <div class="sect" data-k="title">
         <h3>タイトル文字<small>盤面に重ねる見出しとその箱</small></h3>
         <div class="row"><label></label>
           <label class="toggle"><input type="checkbox" id="tOn">タイトルを出す</label>
@@ -895,89 +919,70 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <span class="val" id="vTBw">4</span></div>
         <p class="hint">編集モードでは盤面の上を<b>ドラッグして動かせます</b>。</p>
       </div>
-
-      <div class="sect" id="selSect">
-        <h3>選んだマスの中身<small>必要数・文字・ギフト画像（そのマスだけ）</small></h3>
-        <div id="selBody"></div>
-      </div>
-
-      <div class="sect">
-        <h3>マスにまとめて入力<small>選んだマス（未選択なら全部）へ一気に</small></h3>
-        <div class="row">
-          <label>必要数</label>
-          <input id="bulkNeed" type="number" min="0" placeholder="例 1000" class="grow">
-          <button class="tbtn" id="bulkNeedGo">適用</button>
-        </div>
-        <div class="btnrow">
-          <button class="tbtn" id="bulkSeq">連番ラベル</button>
-          <button class="tbtn" id="bulkNeedLabel">必要数をラベルに</button>
-          <button class="tbtn" id="bulkBlank">ラベル消す</button>
-          <button class="tbtn" id="bulkDefault">もとの名前に戻す</button>
-        </div>
-        <p class="hint">対象は選択中のパネル。未選択なら全パネル。<br>「もとの名前に戻す」で、47都道府県なら<b style="color:var(--muted)">県名</b>、ほかの割り方なら必要数の数字に戻ります。<br>盤面のマスを<b style="color:var(--muted)">ダブルクリック</b>すると、その場で文字を打てます。</p>
-      </div>
-
-      <div class="sect">
-        <h3>マス全体の見た目<small>全マス共通の色・文字・サイズ</small></h3>
-        <div class="row"><label>マスの色</label><input type="color" id="pColor" value="#1B1F2E"></div>
-        <div class="row"><label>マスの色（見本）</label>
-          <div class="swatches" id="pSwatch">
-            <button data-c="#1B1F2E" style="background:#1B1F2E"></button>
-            <button data-c="#F5B33C" style="background:#F5B33C"></button>
-            <button data-c="#E8447A" style="background:#E8447A"></button>
-            <button data-c="#3EA7F0" style="background:#3EA7F0"></button>
-            <button data-c="#FFFFFF" style="background:#FFFFFF"></button>
-          </div>
-        </div>
-        <div class="btnrow" style="margin:-2px 0 8px">
-          <button class="tbtn" id="unifyFill">マスの色を統一</button>
-          <button class="tbtn" id="unifyEdge">枠の色を統一</button>
-        </div>
-        <p class="hint" id="ovrNote" style="margin:0 0 8px"></p>
-        <div class="row"><label>マスの透け具合</label><input type="range" id="pOpa" min="0" max="1" step="0.05" value="1"><span class="val" id="vOpa">100%</span></div>
-        <div class="row"><label>マスの枠の色</label><input type="color" id="bColor" value="#0F1016"></div>
-        <div class="row"><label>マスの枠の太さ</label><input type="range" id="bWidth" min="0" max="24" step="0.5" value="6"><span class="val" id="vBw">6</span></div>
-        <div class="row"><label>マスの文字の色</label><input type="color" id="fColor" value="#FFFFFF"></div>
-        <div class="row" style="align-items:flex-start"><label style="padding-top:6px">マスの文字の書体</label>
-          <div class="fonts grow" id="pFonts"></div></div>
-        <div class="row"><label>マスの文字の太さ</label>
-          <select id="fWeight" class="grow"><option value="500">通常</option><option value="700">太字</option><option value="900" selected>極太</option></select>
-        </div>
-        <div class="row"><label></label><span class="hint" id="fwNote" style="margin:0"></span></div>
-        <div class="row"><label>マスの文字の大きさ</label><input type="range" id="fSize" min="0.4" max="2.2" step="0.05" value="1"><span class="val" id="vFs">1.0</span></div>
-        <div class="row"><label>ギフト画像の大きさ</label><input type="range" id="icSize" min="0.3" max="4" step="0.05" value="1"><span class="val" id="vIc">1.0</span></div>
-        <div class="row"><label>選んだマスを囲む色</label><input type="color" id="selColor" value="#F5B33C"></div>
-        <div class="row"><label></label><span class="hint" style="margin:0">配信中に選んだパネルを囲む色</span></div>
-        <div class="row"><label>埋まったマスが光る色</label><input type="color" id="litColor" value="#FFD34D"></div>
-        <div class="row"><label></label><span class="hint" style="margin:0">47都道府県で、埋まったマスが光る色</span></div>
-        <div class="row"><label>マスの文字のフチ</label>
-          <label class="toggle"><input type="checkbox" id="fEdge" checked>つける</label>
-        </div>
-        <div class="row"><label>マスの文字のフチの色</label><input type="color" id="fEdgeColor" value="#000000"></div>
-        <div class="row"><label>マスが開いたとき</label>
-          <label class="toggle"><input type="checkbox" id="fxBurst" checked>形を降らせる</label>
-        </div>
-        <div class="row"><label></label>
-          <label class="toggle"><input type="checkbox" id="showCount" checked>受取カウンタを出す（0 / 1,000）</label></div>
-        <div class="row"><label></label>
-          <label class="toggle"><input type="checkbox" id="showNo" checked>マスの番号を出す</label></div>
-        <div class="row"><label></label><span class="hint" style="margin:0">番号はもともと配信タブ・全画面では出ません（編集中の目印です）。</span></div>
-        <div class="row"><label>盤面のうしろ</label>
-          <select id="bgSel" class="grow">
-            <option value="dark">暗幕（作業用）</option>
-            <option value="green">クロマキー緑（OBS）</option>
-            <option value="checker">透明（OBS用）</option>
+      <div class="sect" data-k="frame">
+        <h3>盤面のまわりの飾り枠<small>盤面の外側を囲む装飾</small></h3>
+        <div class="frames" id="frames"></div>
+        <div class="row" style="margin-top:11px"><label>飾り枠の色</label>
+          <input type="color" id="frColor" value="#FF57A0"></div>
+        <div class="row"><label>飾り枠の光り方</label>
+          <select id="frGlow" class="grow">
+            <option value="none">なし</option>
+            <option value="soft">ふんわり光る</option>
+            <option value="pulse">ゆっくり明滅</option>
+            <option value="flow">虹色に流れる</option>
           </select>
         </div>
+        <div class="row"><label>太さ</label>
+          <input type="range" id="frSize" min="0.5" max="2" step="0.05" value="1">
+          <span class="val" id="vFr">1.0</span></div>
       </div>
-
-      <div class="sect">
+      <div class="sect" data-k="sticker">
+        <h3>盤面に貼る画像<small>ロゴなどを好きな位置・大きさで重ねる</small></h3>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="tbtn" id="stkPick">＋ 画像を追加</button>
+        </div>
+        <input type="file" id="stkFile" accept="image/*" multiple hidden>
+        <div class="stkList" id="stkThumbs"></div>
+        <div id="stkEdit" hidden style="margin-top:10px">
+          <div class="row"><label>大きさ</label><input type="range" id="stkW" min="0.03" max="1.6" step="0.01" value="0.28"><span class="val" id="vStkW">28%</span></div>
+          <div class="row"><label>回転</label><input type="range" id="stkR" min="-180" max="180" step="1" value="0"><span class="val" id="vStkR">0°</span></div>
+          <div class="row"><label>透明度</label><input type="range" id="stkO" min="0.05" max="1" step="0.05" value="1"><span class="val" id="vStkO">100%</span></div>
+          <div class="row"><label>重なり</label>
+            <button class="tbtn" id="stkBwd">奥へ</button>
+            <button class="tbtn" id="stkFwd">手前へ</button>
+          </div>
+          <div class="row"><label></label>
+            <label class="toggle"><input type="checkbox" id="stkBehind">マスの後ろに置く</label></div>
+          <p class="hint" id="stkMsg" style="margin:2px 0 6px"></p>
+          <div class="btnrow"><button class="tbtn" id="stkDel">削除</button></div>
+        </div>
+        <p class="hint">盤面の上でドラッグして移動、ピンクの丸をドラッグで拡大縮小。盤面の外にも出せます。配信タブでは固定されるので、パネルのクリックを邪魔しません。<br>「マスの後ろ」にすると、すぐマスの裏に回ります。選んでいる間は<b style="color:var(--muted)">うっすらピンクの「つかむ枠」</b>が手前に出るので、それをドラッグすれば動かせます。</p>
+      </div>
+      <div class="grp">④ そのほか</div>
+      <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧</small></h3>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
           <kbd>+</kbd><kbd>Enter</kbd> 加算 / <kbd>-</kbd> 減算 / <kbd>1</kbd>〜<kbd>5</kbd> 加算量 / <kbd>⌘Z</kbd> 1つ戻す。「クリックで直接加算」を入れると、クリックだけで加算する従来の操作になります。<br><br>
           必要数に届いたパネルが消えて下の絵が出ます。全部消えると「コンプリート」。
+        </p>
+      </div>
+      <div class="sect closed" data-k="cmd" id="cmdSect">
+        <h3>裏コマンド（自分用）<small>演出を手で呼び出して確かめる</small></h3>
+        <div class="row">
+          <input id="cmdIn" class="grow" placeholder="ryu / big / fish / カジキ …" autocomplete="off">
+          <button class="tbtn" id="cmdGo">実行</button>
+        </div>
+        <div class="btnrow" style="margin-top:6px">
+          <button class="tbtn" id="cmdRand" style="flex:1">🎲 ランダムで出す</button>
+        </div>
+        <p class="hint" id="cmdMsg" style="margin:6px 0 0">自分で演出を確かめるための欄です。配信画面（盤面）には出ません。</p>
+        <p class="hint" style="margin:6px 0 0">
+          <b style="color:var(--muted)">ryu</b>＝龍 ／ <b style="color:var(--muted)">big</b>＝大物 ／
+          <b style="color:var(--muted)">fish</b>＝魚 ／ 生きものの名前でその子だけ ／
+          <b style="color:var(--muted)">complete</b>＝コンプリート演出。<br>
+          魚と龍は「割り方＝47都道府県」＋「背景の海＝あり」のときだけ出ます。
         </p>
       </div>
     </aside>
@@ -3185,7 +3190,7 @@ $("svg").addEventListener("pointerdown",ev=>{
     if(dbl.p===p&&nw-dbl.t<430){dbl={p:null,t:0};openInline(p);return}
     dbl={p,t:nw};
   }
-  if(p)focusSect("選んだマスの中身");
+  if(p)focusSect("piece");
   if(p&&p.k.charAt(0)==="c"&&sel.has(p)&&!ev.shiftKey){
     pushUndo();
     move={x:ev.clientX,y:ev.clientY,cx:S.opt.cx==null?.5:S.opt.cx,cy:S.opt.cy==null?.5:S.opt.cy};
@@ -3326,6 +3331,30 @@ function setMode(edit){
   if(!edit)sel=new Set();else setCur(null);
   applyBg();render();frameTick(layout);setTimeout(layout,140);
 }
+/* 設定パネルの幅をドラッグで変える */
+function applyRailW(){
+  const w=S.railW;
+  $("rail").style.flexBasis=(w?Math.round(w)+"px":"");
+}
+(function(){
+  const gp=$("railGrip");let st=null;
+  gp.addEventListener("pointerdown",ev=>{
+    ev.preventDefault();
+    st={x:ev.clientX,w:$("rail").getBoundingClientRect().width};
+    gp.classList.add("on");
+    try{gp.setPointerCapture(ev.pointerId)}catch(e){}
+  });
+  gp.addEventListener("pointermove",ev=>{
+    if(!st)return;
+    const max=Math.max(300,Math.min(760,innerWidth-420));
+    S.railW=clamp(st.w-(ev.clientX-st.x),260,max);
+    applyRailW();layout();
+  });
+  const end=()=>{if(!st)return;st=null;gp.classList.remove("on");layout();save()};
+  gp.addEventListener("pointerup",end);
+  gp.addEventListener("pointercancel",end);
+  gp.addEventListener("dblclick",()=>{S.railW=null;applyRailW();layout();save()});
+})();
 $("btnRail").onclick=()=>{
   const on=$("app").classList.toggle("show-rail");
   $("btnRail").setAttribute("aria-pressed",on);
@@ -3489,15 +3518,11 @@ function focusSect(head){
   const now=performance.now();
   if(head===lastFocus&&now-lastFocusAt<1200)return;
   lastFocus=head;lastFocusAt=now;
-  const secs=[...rail.querySelectorAll(".sect")];
-  const sec=secs.find(x=>{
-    const h=x.querySelector("h3");
-    return h&&h.childNodes[0]&&h.childNodes[0].textContent.trim().indexOf(head)===0;
-  });
+  const sec=rail.querySelector('.sect[data-k="'+head+'"]');
   if(!sec)return;
   if(sec.classList.contains("closed")){
     sec.classList.remove("closed");
-    try{localStorage.setItem("pb-sect-"+secs.indexOf(sec),"1")}catch(e){}
+    try{localStorage.setItem("pb-sect-"+head,"1")}catch(e){}
   }
   frameTick(()=>{
     const r=rail.getBoundingClientRect(),t=sec.getBoundingClientRect();
@@ -4561,7 +4586,7 @@ $("stkDel").onclick=()=>{
     const w=ev.target.closest(".stkW");if(!w||!isEdit())return;
     const t=stkList().find(q=>q.id===w.dataset.id);if(!t)return;
     ev.preventDefault();ev.stopPropagation();
-    stkCur=t.id;drawStk();stkUI();focusSect("盤面に貼る画像");
+    stkCur=t.id;drawStk();stkUI();focusSect("sticker");
     const w2=[...document.querySelectorAll('.stkW[data-id="'+t.id+'"]')];
     const b=$("board").getBoundingClientRect();
     const grab=ev.target.classList.contains("stkH");
@@ -4597,7 +4622,7 @@ $("stkDel").onclick=()=>{
   e.addEventListener("pointerdown",ev=>{
     ev.preventDefault();ev.stopPropagation();
     const b=$("board").getBoundingClientRect();
-    focusSect("タイトル文字");
+    focusSect("title");
     dg={x:ev.clientX,y:ev.clientY,x0:S.title.x==null?.5:S.title.x,
         y0:S.title.y==null?.16:S.title.y,w:b.width,h:b.height,moved:false};
     e.classList.add("dragging");
@@ -4894,29 +4919,21 @@ document.addEventListener("keydown",e=>{
 
 /* ---------- collapsible sections & the file menu ---------- */
 function foldSections(){
-  const open0=[1,0,0,1,0,0,1,0,1,0];
-  document.querySelectorAll(".rail .sect").forEach((sec,i)=>{
+  const ICON={"hidden": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"3\"/><circle cx=\"8.5\" cy=\"9.5\" r=\"1.6\"/><path d=\"M4 17l5-5 4 4 3-2 4 4\"/></svg>", "cmd": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2.5\" y=\"4\" width=\"19\" height=\"16\" rx=\"3\"/><path d=\"M7 9.5l3 2.5-3 2.5M12.5 15h4.5\"/></svg>", "sticker": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 4h11l5 5v11H4z\"/><path d=\"M15 4v5h5\"/><circle cx=\"9.5\" cy=\"12\" r=\"2\"/></svg>", "pattern": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><rect x=\"3\" y=\"3\" width=\"7.5\" height=\"7.5\" rx=\"2\"/><rect x=\"13.5\" y=\"3\" width=\"7.5\" height=\"7.5\" rx=\"2\"/><rect x=\"3\" y=\"13.5\" width=\"7.5\" height=\"7.5\" rx=\"2\"/><path d=\"M17.2 13.6c1.6 1.4 3.8 3 3.8 4.8a2.6 2.6 0 0 1-5.2.3 2.6 2.6 0 0 1-5.2-.3c0-1.8 2.2-3.4 3.8-4.8\"/></svg>", "frame": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><rect x=\"2.5\" y=\"4\" width=\"19\" height=\"16\" rx=\"3\"/><rect x=\"6\" y=\"7.5\" width=\"12\" height=\"9\" rx=\"1.5\"/></svg>", "title": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 7V5h16v2M12 5v14M9 19h6\"/></svg>", "piece": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"12\" height=\"12\" rx=\"3\"/><path d=\"M13 13l8 3-3.4 1.4L16 21z\" fill=\"currentColor\" stroke=\"none\"/></svg>", "bulk": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 7h16M4 12h11M4 17h7\"/><circle cx=\"19\" cy=\"15.5\" r=\"2.5\"/></svg>", "look": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.5-1.8-.4-1.2.5-2.2 1.8-2.2H18a3 3 0 0 0 3-3c0-5-4-11-9-11z\"/><circle cx=\"8.5\" cy=\"10.5\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"7.5\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"15.5\" cy=\"10.5\" r=\"1.2\" fill=\"currentColor\"/></svg>", "help": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.3\"/><circle cx=\"12\" cy=\"17\" r=\"1\" fill=\"currentColor\"/></svg>"};
+  const TINT={"pattern": "#7C6BFF", "hidden": "#FF57A0", "piece": "#F0509B", "bulk": "#25CBAA", "look": "#B06BFF", "title": "#FF8A6B", "frame": "#FFB43D", "sticker": "#9B6BFF", "help": "#49B6F5", "cmd": "#5CC98F"};
+  const OPEN0={"pattern": 1, "hidden": 1, "piece": 1, "bulk": 0, "look": 1, "title": 0, "frame": 0, "sticker": 0, "help": 0, "cmd": 0};
+  document.querySelectorAll(".rail .sect").forEach(sec=>{
     const h=sec.querySelector("h3");
     if(!h||sec.dataset.fold)return;
     sec.dataset.fold="1";
+    const key=sec.dataset.k||"x";
     const head=document.createElement("div");
     head.className="sect-head";head.tabIndex=0;
-    const ICONS=[
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-2 4 4"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><circle cx="9.5" cy="12" r="2"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><path d="M17.2 13.6c1.6 1.4 3.8 3 3.8 4.8a2.6 2.6 0 0 1-5.2.3 2.6 2.6 0 0 1-5.2-.3c0-1.8 2.2-3.4 3.8-4.8"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><rect x="6" y="7.5" width="12" height="9" rx="1.5"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="3"/><path d="M13 13l8 3-3.4 1.4L16 21z" fill="currentColor" stroke="none"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h11M4 17h7"/><circle cx="19" cy="15.5" r="2.5"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.5-1.8-.4-1.2.5-2.2 1.8-2.2H18a3 3 0 0 0 3-3c0-5-4-11-9-11z"/><circle cx="8.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10.5" r="1.2" fill="currentColor"/></svg>',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.3"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>'];
-    const TINTS=["#FF57A0","#9B6BFF","#FF8A6B","#7C6BFF","#F0509B","#25CBAA","#FFB43D","#49B6F5","#B06BFF","#5CC98F"];
-    const dot=document.createElement("span");dot.className="dot";
-    dot.innerHTML=ICONS[i]||"";
-    dot.style.color=TINTS[i]||"#FF57A0";
-    dot.style.background=(TINTS[i]||"#FF57A0")+"1F";
+    const dot=document.createElement("span");
+    dot.className="dot";
+    dot.innerHTML=ICON[key]||"";
+    dot.style.color=TINT[key]||"#FF57A0";
+    dot.style.background=(TINT[key]||"#FF57A0")+"1F";
     sec.insertBefore(head,h);
     head.appendChild(dot);head.appendChild(h);
     head.insertAdjacentHTML("beforeend",'<span class="chev"></span>');
@@ -4924,12 +4941,12 @@ function foldSections(){
     body.className="sect-body";
     while(head.nextSibling)body.appendChild(head.nextSibling);
     sec.appendChild(body);
-    let open=open0[i]!==0;
-    try{const v=localStorage.getItem("pb-sect-"+i);if(v!=null)open=v==="1"}catch(e){}
+    let open=OPEN0[key]!==0;
+    try{const v=localStorage.getItem("pb-sect-"+key);if(v!=null)open=v==="1"}catch(e){}
     sec.classList.toggle("closed",!open);
     const flip=()=>{
       const nowOpen=sec.classList.toggle("closed")===false;
-      try{localStorage.setItem("pb-sect-"+i,nowOpen?"1":"0")}catch(e){}
+      try{localStorage.setItem("pb-sect-"+key,nowOpen?"1":"0")}catch(e){}
     };
     head.addEventListener("click",flip);
     head.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();flip()}});
@@ -5005,7 +5022,7 @@ drawFrames();drawTitleFonts();drawPanelFonts();
 $("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
-syncUI();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
+syncUI();applyRailW();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
 seaSchedule();
 (function(){/* 隠しコマンド：fish＝魚 / big＝大物 / ryu＝龍 */
   let buf="";
