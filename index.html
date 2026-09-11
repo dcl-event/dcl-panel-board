@@ -3196,7 +3196,7 @@ $("svg").addEventListener("pointerdown",ev=>{
     if(dbl.p===p&&nw-dbl.t<430){dbl={p:null,t:0};openInline(p);return}
     dbl={p,t:nw};
   }
-  if(p)focusSect("piece");
+  if(p&&!ev.shiftKey)focusSect("piece");
   if(p&&p.k.charAt(0)==="c"&&sel.has(p)&&!ev.shiftKey){
     pushUndo();
     move={x:ev.clientX,y:ev.clientY,cx:S.opt.cx==null?.5:S.opt.cx,cy:S.opt.cy==null?.5:S.opt.cy};
@@ -3555,6 +3555,8 @@ function focusSect(head){
   }
   frameTick(()=>{
     const r=rail.getBoundingClientRect(),t=sec.getBoundingClientRect();
+    /* もう見えている所へは飛ばない（選び直すたびに動くとうるさいので） */
+    if(t.top>=r.top-4&&t.top<r.bottom-60)return;
     rail.scrollTo({top:rail.scrollTop+(t.top-r.top)-10,behavior:"smooth"});
     sec.classList.remove("flash");void sec.offsetWidth;sec.classList.add("flash");
     setTimeout(()=>sec.classList.remove("flash"),1100);
