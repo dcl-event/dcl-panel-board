@@ -1417,7 +1417,7 @@ function sampleImage(){
 }
 
 /* fields that belong to a panel rather than to the pattern */
-const CARRY=["need","got","open","label","auto","pc","bc","bwm","glow","fx","fxc","ic","icS","tx","ty","tS"];
+const CARRY=["need","got","open","label","auto","pc","bc","bwm","glow","fx","fxc","ic","icS","iX","iY","tx","ty","tS"];
 const pick=p=>{const o={k:p.k};CARRY.forEach(f=>o[f]=p[f]);return o};
 function applyTo(p,o){if(!o)return;CARRY.forEach(f=>{if(o[f]!==undefined)p[f]=o[f]})}
 
@@ -1428,7 +1428,7 @@ function rebuild(){
   pieces.forEach((p,i)=>{
     p.need=1000;p.got=0;p.open=false;
     p.label=p.dl||"1000";p.auto=!p.dl;
-    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.tx=0;p.ty=0;p.tS=1;
+    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.iX=0;p.iY=0;p.tx=0;p.ty=0;p.tS=1;
     applyTo(p,old[p.k]);
     if(!p.fx)p.fx="none";
     if(p.fxc===GOLD)p.fxc=null;   // 旧データの既定値は「枠線に合わせる」扱い
@@ -1971,7 +1971,8 @@ function layoutPiece(p,st){
   // the picture keeps growing past the panel — the overflow is simply cropped
   const box=ico?Math.min(p.r*.55*(st.icSize==null?1:st.icSize)*(p.icS||1),
     Math.max(bb.w,bb.h)*5):0;
-  return{lines,ico,iw:box,ih:box,ix:p.lx-box/2,iy:p.ly-box/2,
+  return{lines,ico,iw:box,ih:box,
+    ix:p.lx-box/2+(p.iX||0)*bb.w/2,iy:p.ly-box/2+(p.iY||0)*bb.h/2,
     fs,cs,lh,ch,textH,ty,tcx,roomW,bx:bb.x,bx2:bb.x+bb.w};
 }
 function syncFollowers(){
@@ -2979,6 +2980,15 @@ function paintSel(){
         <input type="range" id="icScale" min="0.2" max="8" step="0.05" value="${head.icS||1}">
         <span class="val" id="vIcS">${Number(head.icS||1).toFixed(2)}×</span>
       </div>
+      <div class="row"><label>画像のよこ</label>
+        <input type="range" id="icPosX" min="-1" max="1" step="0.02" value="${head.iX||0}">
+        <span class="val" id="vIcX">${Math.round((head.iX||0)*100)}</span>
+      </div>
+      <div class="row"><label>画像のたて</label>
+        <input type="range" id="icPosY" min="-1" max="1" step="0.02" value="${head.iY||0}">
+        <span class="val" id="vIcY">${Math.round((head.iY||0)*100)}</span>
+      </div>
+      <div class="btnrow"><button class="tbtn" id="icPosReset">画像を既定に戻す</button></div>
       <p class="hint" style="margin:0">マスいっぱいまで拡大できます。文字は画像の大きさに関係なく一定で、上に重なります。</p>
       <div class="row"><label>文字の大きさ</label>
         <input type="range" id="tScale" min="0.2" max="4" step="0.05" value="${head.tS==null?1:head.tS}">
@@ -3016,6 +3026,13 @@ function paintSel(){
     arr.forEach(q=>q[field]=v);render(true);save();
   });
   movetxt("tPosX","tx","vTX");movetxt("tPosY","ty","vTY");
+  movetxt("icPosX","iX","vIcX");movetxt("icPosY","iY","vIcY");
+  $("icPosReset").onclick=()=>{pushUndo();
+    arr.forEach(q=>{q.iX=0;q.iY=0;q.icS=1});
+    $("icPosX").value=0;$("vIcX").textContent="0";
+    $("icPosY").value=0;$("vIcY").textContent="0";
+    $("icScale").value=1;$("vIcS").textContent="1.00×";
+    render();save()};
   $("tScale").addEventListener("input",()=>{
     const v=+$("tScale").value;$("vTS").textContent=v.toFixed(2)+"×";
     arr.forEach(q=>q.tS=v);render(true);save();
