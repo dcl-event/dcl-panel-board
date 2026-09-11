@@ -210,7 +210,12 @@ button{cursor:pointer}
 .piece.follower{pointer-events:none}
 .no{font-family:var(--mono);fill:rgba(255,255,255,.6)}
 
-.marquee{position:absolute;z-index:9;border:1.5px solid var(--gold);background:var(--gold-wash);pointer-events:none}
+.marquee{position:absolute;z-index:24;border:2px dashed var(--selc,#FF7BB5);border-radius:7px;
+  background:rgba(255,123,181,.16);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+.marquee b{position:absolute;right:-2px;bottom:-26px;font-size:11px;font-weight:800;line-height:1;
+  padding:4px 8px;border-radius:999px;background:var(--selc,#FF7BB5);color:#fff;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.piece.pre .face{filter:brightness(1.35) saturate(1.15)}
 .complete{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;
   opacity:0;transition:opacity .5s ease}
 .complete.show{opacity:1;
@@ -3218,6 +3223,7 @@ $("svg").addEventListener("pointermove",ev=>{
   if(!drag)return;drag.x1=ev.clientX;drag.y1=ev.clientY;drawMarq();
 });
 $("svg").addEventListener("pointerup",()=>{
+  clearPre();
   if(inlineP){drag=null;return}
   if(move){move=null;rebuild();patOpts();render();save();return}
   if(!drag)return;
@@ -3243,6 +3249,13 @@ $("svg").addEventListener("contextmenu",ev=>{
   const g=ev.target.closest?ev.target.closest(".piece"):null;
   if(g)hitPiece(S.pieces[+g.dataset.i],-1);
 });
+function marqPick(){
+  if(!drag)return[];
+  const b=$("board").getBoundingClientRect(),k=VW/BW;
+  const x0=(Math.min(drag.x0,drag.x1)-b.left)*k,x1=(Math.max(drag.x0,drag.x1)-b.left)*k;
+  const y0=(Math.min(drag.y0,drag.y1)-b.top)*k,y1=(Math.max(drag.y0,drag.y1)-b.top)*k;
+  return S.pieces.filter(p=>!p.follow&&p.lx>=x0&&p.lx<=x1&&p.ly>=y0&&p.ly<=y1);
+}
 function drawMarq(){
   if(!marq||!drag)return;
   const b=$("board").getBoundingClientRect();
@@ -3250,7 +3263,16 @@ function drawMarq(){
   marq.style.top=(Math.min(drag.y0,drag.y1)-b.top)+"px";
   marq.style.width=Math.abs(drag.x1-drag.x0)+"px";
   marq.style.height=Math.abs(drag.y1-drag.y0)+"px";
+  /* 囲まれているマスをその場で光らせて、枚数も出す */
+  const picked=new Set(marqPick());
+  S.pieces.forEach(q=>{if(q._g)q._g.classList.toggle("pre",picked.has(q))});
+  const n=drag.add?new Set([...sel,...picked]).size:picked.size;
+  let tag=marq.firstChild;
+  if(!tag){tag=document.createElement("b");marq.appendChild(tag)}
+  tag.textContent=n+" 枚";
+  tag.hidden=Math.abs(drag.x1-drag.x0)<12&&Math.abs(drag.y1-drag.y0)<12;
 }
+function clearPre(){S.pieces.forEach(q=>{if(q._g)q._g.classList.remove("pre")})}
 function step(){const f=+$("freeStep").value;return f>0?f:S.step}
 function hitPiece(p,dir){
   if(!p)return;
