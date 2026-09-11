@@ -998,7 +998,11 @@ const RAW={
       const a=-Math.PI/2+i/N*Math.PI*2;
       parts.push({c:[Math.cos(a)*.56,.02+Math.sin(a)*.54,.27]});
     }
-    [1,-1].forEach(k=>parts.push({p:[[k*.13,-.64],[k*.30,-1.06],[k*.47,-.58]]}));
+    // 角は棘ではなく枝分かれした鹿角ふう
+    [1,-1].forEach(k=>{
+      parts.push({p:[[k*.12,-.58],[k*.26,-1.08],[k*.42,-.94],[k*.40,-.54]]});
+      parts.push({p:[[k*.34,-.76],[k*.72,-1.00],[k*.74,-.82],[k*.36,-.62]]});
+    });
     parts.push({c:[0,.70,.31]},{c:[0,.86,.25]});   // 下に出る鼻づら
     return unionPolar([0,.02],parts,340);
   }
