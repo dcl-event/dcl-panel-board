@@ -999,7 +999,8 @@ const RAW={
       parts.push({c:[Math.cos(a)*.56,.02+Math.sin(a)*.54,.27]});
     }
     [1,-1].forEach(k=>parts.push({p:[[k*.13,-.64],[k*.30,-1.06],[k*.47,-.58]]}));
-    return unionPolar([0,.02],parts,320);
+    parts.push({c:[0,.70,.31]},{c:[0,.86,.25]});   // 下に出る鼻づら
+    return unionPolar([0,.02],parts,340);
   }
 };
 const SHAPE_LABEL={heart:"ハート",star:"星",circle:"丸",rhombus:"ひし形",hex:"六角",flower:"花",
