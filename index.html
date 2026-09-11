@@ -228,6 +228,11 @@ button{cursor:pointer}
   50%{filter:drop-shadow(0 0 22px var(--cc,#F5B33C))}}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 
+.bargrip{flex:0 0 8px;cursor:row-resize;position:relative;z-index:31;display:none;touch-action:none}
+.mode-live .bargrip{display:block}
+.bargrip::before{content:"";position:absolute;left:50%;top:2px;width:56px;height:4px;margin-left:-28px;
+  border-radius:99px;background:var(--line);opacity:.6;transition:opacity .15s,background .15s}
+.bargrip:hover::before,.bargrip.on::before{opacity:1;background:var(--pink,#FF57A0)}
 .livebar{flex:0 0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 16px;
   background:linear-gradient(180deg,#1B1D28,#191B25);border-top:1px solid var(--line);
   position:relative;z-index:30}
@@ -693,7 +698,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><div id="stkBack"></div><svg id="svg"></svg><canvas id="seafx"></canvas><div id="stk"></div><textarea id="inlineEdit" spellcheck="false"></textarea><canvas id="fxcv"></canvas></div>
         <canvas id="dragfx"></canvas>
       </div>
-      <div class="livebar">
+      <div class="bargrip" id="barGrip" title="上下にドラッグでカウンター欄の大きさを変える／ダブルクリックで既定に戻す"></div>
+      <div class="livebar" id="livebar">
         <div class="cursel" id="cursel">
           <div class="eyebrow">選択中のパネル</div>
           <div class="cur-main"><span class="cur-no" id="curNo">—</span><b id="curLabel">パネルをクリックして選ぶ</b></div>
@@ -3331,6 +3337,29 @@ function setMode(edit){
   if(!edit)sel=new Set();else setCur(null);
   applyBg();render();frameTick(layout);setTimeout(layout,140);
 }
+/* カウンター欄（下のバー）の大きさをドラッグで変える */
+function applyBarZ(){
+  const v=S.barZ;
+  $("livebar").style.zoom=v?String(v):"";
+}
+(function(){
+  const gp=$("barGrip");let st=null;
+  gp.addEventListener("pointerdown",ev=>{
+    ev.preventDefault();
+    st={y:ev.clientY,z:S.barZ||1};
+    gp.classList.add("on");
+    try{gp.setPointerCapture(ev.pointerId)}catch(e){}
+  });
+  gp.addEventListener("pointermove",ev=>{
+    if(!st)return;
+    S.barZ=+clamp(st.z+(st.y-ev.clientY)/260,.65,1.8).toFixed(3);
+    applyBarZ();layout();
+  });
+  const end=()=>{if(!st)return;st=null;gp.classList.remove("on");layout();save()};
+  gp.addEventListener("pointerup",end);
+  gp.addEventListener("pointercancel",end);
+  gp.addEventListener("dblclick",()=>{S.barZ=null;applyBarZ();layout();save()});
+})();
 /* 設定パネルの幅をドラッグで変える */
 function applyRailW(){
   const w=S.railW;
@@ -5022,7 +5051,7 @@ drawFrames();drawTitleFonts();drawPanelFonts();
 $("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
-syncUI();applyRailW();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
+syncUI();applyRailW();applyBarZ();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
 seaSchedule();
 (function(){/* 隠しコマンド：fish＝魚 / big＝大物 / ryu＝龍 */
   let buf="";
