@@ -278,6 +278,8 @@ button{cursor:pointer}
 .rail::-webkit-scrollbar-thumb{background:#2C3040;border-radius:99px;border:3px solid var(--surface)}
 .rail::-webkit-scrollbar-track{background:transparent}
 .mode-live .rail{display:none}
+.mode-live.show-rail .rail{display:block}
+.mode-edit #btnRail{display:none}
 .mode-live .livebar{display:flex}
 .mode-edit .livebar{display:none}
 .sect{padding:0 18px}
@@ -640,6 +642,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     </div>
     <div class="spacer"></div>
     <span class="saved" id="saved">自動保存</span>
+    <button class="tbtn ghost" id="btnRail" aria-pressed="false" title="配信中でも設定をいじれます">設定</button>
     <button class="tbtn ghost" id="btnPrev">本番の見た目</button>
     <button class="tbtn ghost" id="btnSolo">盤面だけ</button>
     <button class="tbtn ghost" id="btnFull">全画面</button>
@@ -3233,13 +3236,22 @@ function doUndo(){
 
 /* ============ controls ============ */
 function setMode(edit){
+  if(inlineP)closeInline(false);
   $("app").classList.toggle("mode-edit",edit);
+  $("app").classList.toggle("show-rail",!edit&&!!S.liveRail);
+  $("btnRail").setAttribute("aria-pressed",!edit&&!!S.liveRail);
   $("app").classList.toggle("mode-live",!edit);
   $("mEdit").setAttribute("aria-pressed",edit);
   $("mLive").setAttribute("aria-pressed",!edit);
   if(!edit)sel=new Set();else setCur(null);
   applyBg();render();frameTick(layout);setTimeout(layout,140);
 }
+$("btnRail").onclick=()=>{
+  const on=$("app").classList.toggle("show-rail");
+  $("btnRail").setAttribute("aria-pressed",on);
+  S.liveRail=on;save();
+  frameTick(layout);setTimeout(layout,150);
+};
 $("mEdit").onclick=()=>setMode(true);
 $("mLive").onclick=()=>setMode(false);
 $("patterns").addEventListener("click",e=>{
