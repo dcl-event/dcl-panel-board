@@ -1066,7 +1066,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:46</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:47</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1454,8 +1454,11 @@ function genPieces(pat,W,H,o){
         // 盤面のふちまでの距離。四隅にはみ出す帯は、字が潰れないよう内側に寄せる
         const edge=Math.min(Math.abs((W/2)/(Math.cos(am)||1e-6)),
                             Math.abs((H/2)/(Math.sin(am)||1e-6)));
-        const rm=Math.min((r0+r1)/2,Math.max(r0+(r1-r0)*.22,edge*.70));
-        const th=r1-r0,arc=rm*(a1-a0);
+        // 一番外の帯は、四隅にはみ出す分は前の領域の一部として扱い、字は円の内側に置く
+        const outer=b===bands-1;
+        const cap=outer?Math.min(Rin*.86,edge*.72):edge*.70;
+        const rm=Math.min((r0+r1)/2,Math.max(r0+(r1-r0)*.20,cap));
+        const th=(outer?Math.min(r1,Rin)-r0:r1-r0),arc=rm*(a1-a0);
         const room=Math.min(th,arc,edge*.52);
         const m=room*.3;
         const lx=clamp(cx+Math.cos(am)*rm,m,W-m),ly=clamp(cy+Math.sin(am)*rm,m,H-m);
