@@ -210,6 +210,23 @@ button{cursor:pointer}
 .piece.follower{pointer-events:none}
 .no{font-family:var(--mono);fill:rgba(255,255,255,.6)}
 
+.dart{position:absolute;z-index:23;width:96px;height:24px;margin:-12px 0 0 -96px;
+  pointer-events:none;transform-origin:100% 50%;opacity:0;
+  transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--a,0deg)) scale(.4)}
+.dart.go{opacity:1;transform:translate(0,0) rotate(var(--a,0deg)) scale(1);
+  transition:transform .34s cubic-bezier(.45,.05,.85,.6),opacity .08s linear}
+.dart.hit{animation:dartStick .42s ease-out}
+@keyframes dartStick{0%{filter:none}
+  22%{transform:translate(0,0) rotate(calc(var(--a,0deg) + 7deg)) scale(1)}
+  55%{transform:translate(0,0) rotate(calc(var(--a,0deg) - 4deg)) scale(1)}
+  100%{transform:translate(0,0) rotate(var(--a,0deg)) scale(1)}}
+.dart svg{width:100%;height:100%;display:block;overflow:visible;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.dartHit{position:absolute;z-index:22;width:20px;height:20px;margin:-10px 0 0 -10px;
+  border-radius:50%;pointer-events:none;border:3px solid #fff;
+  animation:dartRing .45s ease-out forwards}
+@keyframes dartRing{0%{transform:scale(.2);opacity:.95}100%{transform:scale(4.2);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dart,.dartHit{display:none}}
 .marquee{position:absolute;z-index:24;border:2px dashed var(--selc,#FF7BB5);border-radius:7px;
   background:rgba(255,123,181,.16);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
 .marquee b{position:absolute;right:-2px;bottom:-26px;font-size:11px;font-weight:800;line-height:1;
@@ -973,7 +990,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/11 20:26</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:49</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1334,6 +1351,41 @@ function genPieces(pat,W,H,o){
     return{pieces:P,cut};
   }
 
+  if(pat==="darts"){
+    const cx=W/2,cy=H/2;
+    const Rin=Math.min(W,H)/2,R=Math.hypot(W,H)/2*1.02;
+    const rb=Rin*.14,ro=Rin*.25;            // ブル と アウターブル
+    const bands=Math.max(2,Math.min(6,o.rings||3));
+    const n=Math.max(3,Math.min(20,o.sectors||10));
+    const ring=(r0,r1)=>{
+      const outer=[],inner=[];
+      for(let t=0;t<80;t++){const a=t/80*Math.PI*2;outer.push([cx+Math.cos(a)*r1,cy+Math.sin(a)*r1])}
+      for(let t=79;t>=0;t--){const a=t/80*Math.PI*2;inner.push([cx+Math.cos(a)*r0,cy+Math.sin(a)*r0])}
+      return poly(outer)+(r0>0?poly(inner):"");
+    };
+    const wedge=(r0,r1,a0,a1)=>{
+      const p=[];
+      for(let t=0;t<=18;t++){const a=a0+(a1-a0)*t/18;p.push([cx+Math.cos(a)*r1,cy+Math.sin(a)*r1])}
+      for(let t=18;t>=0;t--){const a=a0+(a1-a0)*t/18;p.push([cx+Math.cos(a)*r0,cy+Math.sin(a)*r0])}
+      return poly(p);
+    };
+    // 外側の帯から内側へ（あとから描く=内側が上）
+    for(let b=bands-1;b>=0;b--){
+      const r0=ro+(R-ro)*b/bands,r1=ro+(R-ro)*(b+1)/bands;
+      for(let i=0;i<n;i++){
+        const a0=-Math.PI/2+i/n*Math.PI*2,a1=-Math.PI/2+(i+1)/n*Math.PI*2;
+        const am=(a0+a1)/2,rm=(r0+r1)/2;
+        const th=r1-r0,arc=rm*(a1-a0);
+        const m=Math.min(th,arc)*.3;
+        const lx=clamp(cx+Math.cos(am)*rm,m,W-m),ly=clamp(cy+Math.sin(am)*rm,m,H-m);
+        push("d"+b+"_"+i,wedge(r0,r1,a0,a1),lx,ly,Math.min(th,arc)*.95);
+      }
+    }
+    push("dOut",ring(rb,ro),cx,cy-(rb+ro)/2,(ro-rb)*1.1);
+    push("dBull",ring(0,rb),cx,cy,rb*1.35);
+    return{pieces:P,cut};
+  }
+
   if(pat==="rings"){
     const n=o.rings,cx=W/2,cy=H/2,R=Math.hypot(W,H)/2*1.02;
     for(let i=n-1;i>=0;i--){
@@ -1419,6 +1471,7 @@ const PATTERNS=[
   {id:"hex",    name:"ハニカム"},
   {id:"radial", name:"放射"},
   {id:"rings",  name:"同心円"},
+  {id:"darts",  name:"ダーツ"},
   {id:"diamond",name:"ダイヤ"},
   {id:"japan",  name:"47都道府県"}
 ];
@@ -2859,6 +2912,11 @@ function patOpts(){
   if(S.pattern==="hex"||S.pattern==="diamond")h+=stepRow("cols",o.cols,2,10,"細かさ");
   if(S.pattern==="radial")h+=stepRow("sectors",o.sectors,2,24,"分割数");
   if(S.pattern==="rings")h+=stepRow("rings",o.rings,2,10,"リング数");
+  if(S.pattern==="darts"){
+    h+=stepRow("rings",Math.max(2,Math.min(6,o.rings||3)),2,6,"輪の数")
+      +stepRow("sectors",Math.max(3,Math.min(20,o.sectors||10)),3,20,"分割数")
+      +`<div class="row"><label></label><span class="hint" style="margin:0">まん中はブル（1点）とアウターブル。外の輪は盤面のすみまで届きます。</span></div>`;
+  }
   if(S.pattern==="jigsaw")h+=`<div class="btnrow" style="margin-top:8px"><button class="tbtn" id="reseed">形をシャッフル</button></div>`;
   if(S.pattern==="japan"){
     const sea=S.sea||{};
@@ -3315,9 +3373,10 @@ function hitPiece(p,dir){
     g.classList.remove("hit");g.getBoundingClientRect();g.classList.add("hit");
     setTimeout(()=>g.classList.remove("hit"),260);
     if(!was&&p.open){
-      const litMode=S.pattern==="japan";
-      const wait=(litMode||S.fxBurst===false)?70:FILL_MS;
-      if(!litMode&&S.fxBurst!==false){p._hideUntil=performance.now()+FILL_MS;playBurst()}
+      const litMode=S.pattern==="japan",dartMode=S.pattern==="darts";
+      const wait=(litMode||S.fxBurst===false)?70:(dartMode?400:FILL_MS);
+      if(dartMode){p._hideUntil=performance.now()+400;throwDart(p)}
+      else if(!litMode&&S.fxBurst!==false){p._hideUntil=performance.now()+FILL_MS;playBurst()}
       g.classList.add("pop");
       setTimeout(()=>{g.classList.remove("pop");
         if(!litMode)g.classList.add("is-open");
@@ -3589,6 +3648,41 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
   if(p==="none"){T.edge=0;T.edge2=false;T.drop=false}
   syncTitleUI();renderTitle();save();
 });
+/* ダーツ：ボタンを押すと矢が飛んでくる */
+const DART_SVG='<svg viewBox="0 0 96 24" xmlns="http://www.w3.org/2000/svg">'
+ +'<path d="M62 8h30l-8 4 8 4H62z" fill="#E8447A"/>'
+ +'<path d="M62 8h30l-8 4H62z" fill="#FF8FC0"/>'
+ +'<rect x="52" y="10.5" width="14" height="3" rx="1.5" fill="#8892A8"/>'
+ +'<rect x="26" y="8" width="28" height="8" rx="4" fill="#6E7891"/>'
+ +'<rect x="26" y="8" width="28" height="3.4" rx="1.7" fill="#A9B3C8"/>'
+ +'<path d="M26 9.4h-8l-1 2.6 1 2.6h8z" fill="#4A5266"/>'
+ +'<path d="M18 9.4L2 12l16 2.6z" fill="#D9E2F0"/>'
+ +'<path d="M18 9.4L2 12l16 1.2z" fill="#FFFFFF"/></svg>';
+function throwDart(p){
+  if(!BW||!BH||!p)return;
+  if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const b=$("board"),H=vh();
+  const tx=p.lx*(BW/VW),ty=p.ly*(BH/H);
+  const side=Math.random()<.5?-1:1;
+  const fx=tx+side*BW*(.9+Math.random()*.5),fy=ty+BH*(.85+Math.random()*.5);
+  const el=document.createElement("div");
+  el.className="dart";el.innerHTML=DART_SVG;
+  el.style.left=tx+"px";el.style.top=ty+"px";
+  el.style.setProperty("--a",(Math.atan2(ty-fy,tx-fx)*180/Math.PI).toFixed(1)+"deg");
+  el.style.setProperty("--dx",(fx-tx).toFixed(1)+"px");
+  el.style.setProperty("--dy",(fy-ty).toFixed(1)+"px");
+  b.appendChild(el);
+  frameTick(()=>el.classList.add("go"));
+  setTimeout(()=>{
+    el.classList.add("hit");
+    const ring=document.createElement("div");
+    ring.className="dartHit";ring.style.left=tx+"px";ring.style.top=ty+"px";
+    ring.style.borderColor=(S.style.litColor||"#FFD34D");
+    b.appendChild(ring);
+    setTimeout(()=>ring.remove(),500);
+  },350);
+  setTimeout(()=>el.remove(),1800);
+}
 /* 盤面で触ったものに合わせて、設定側をそこまで送る */
 let lastFocus="",lastFocusAt=0;
 function focusSect(head){
