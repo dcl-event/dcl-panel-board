@@ -319,6 +319,15 @@ button{cursor:pointer}
 #reticle::before{left:50%;top:-10px;width:2px;height:78px;margin-left:-1px}
 #reticle::after{top:50%;left:-10px;height:2px;width:78px;margin-top:-1px}
 @keyframes retPulse{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.12);opacity:.7}}
+.boltfx{position:absolute;inset:0;width:100%;height:100%;z-index:24;pointer-events:none;
+  overflow:visible;animation:boltFlick .62s steps(1) forwards}
+.boltfx .bolt-glow{fill:none;stroke:#FFE066;stroke-width:8;stroke-linejoin:round;opacity:.5;
+  filter:drop-shadow(0 0 9px #FFD34D)}
+.boltfx .bolt-core{fill:none;stroke:#FFFDF0;stroke-width:2.6;stroke-linejoin:round}
+@keyframes boltFlick{0%{opacity:1}18%{opacity:.25}30%{opacity:1}52%{opacity:.4}70%{opacity:.9}100%{opacity:0}}
+.boltFlash{position:absolute;inset:0;z-index:23;pointer-events:none;background:#FFF6C8;
+  animation:boltFlash .32s ease-out forwards}
+@keyframes boltFlash{0%{opacity:.35}100%{opacity:0}}
 .hpop.flame svg{filter:drop-shadow(0 0 6px rgba(255,138,43,.8))}
 .snipeRing{position:absolute;z-index:24;width:24px;height:24px;margin:-12px 0 0 -12px;
   border-radius:50%;border:3px solid #3FD6FF;pointer-events:none;
@@ -786,6 +795,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="arrowseg" id="arrowKind">
           <button data-k="normal" aria-pressed="true">💘<i>ふつう</i></button>
           <button data-k="fire" aria-pressed="false">🔥<i>炎</i></button>
+          <button data-k="bolt" aria-pressed="false">⚡<i>雷</i></button>
           <button data-k="snipe" aria-pressed="false">🎯<i>スナイプ</i></button>
         </div>
         <div>
@@ -1046,7 +1056,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:30</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:35</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -3424,11 +3434,11 @@ function drawMarq(){
 }
 function clearPre(){S.pieces.forEach(q=>{if(q._g)q._g.classList.remove("pre")})}
 function step(){const f=+$("freeStep").value;return f>0?f:S.step}
-function hitPiece(p,dir,fromArrow){
+function hitPiece(p,dir,fromArrow,amount){
   if(!p)return;
   if(dir>0&&p.open)return;
   pushUndo();
-  const was=p.open,delta=dir*step();
+  const was=p.open,delta=dir*(amount||step());
   p.got=Math.max(0,p.got+delta);
   p.open=p.need>0?p.got>=p.need:p.got>0;
   if(!was&&p.open)p._t0=performance.now()+(S.fxBurst===false?0:FILL_MS);
@@ -3739,13 +3749,17 @@ const HEART_D="M0 9C-8 3.5-10-.4-10-3.4-10-6.5-7.6-9-4.5-9-2.7-9-1-8.1 0-6.7 1-8
 const ARROW_COL={
   normal:{a:"#FF2E80",b:"#FFA7CE",f1:"#FF8FC0",f2:"#E8447A"},
   fire:  {a:"#FF5A12",b:"#FFD37A",f1:"#FFB347",f2:"#FF6B2C"},
-  snipe: {a:"#12B8E8",b:"#CDF3FF",f1:"#9EE7FF",f2:"#28A8D8"}
+  snipe: {a:"#12B8E8",b:"#CDF3FF",f1:"#9EE7FF",f2:"#28A8D8"},
+  bolt:  {a:"#F5C518",b:"#FFF3B0",f1:"#FFE066",f2:"#C79A00"}
 };
 function arrowSvg(kind){
   const c=ARROW_COL[kind]||ARROW_COL.normal;
   const flame=kind==="fire"
     ?'<path d="M104 3c7 5 9 12 5 18 3-6 1-11-5-18Z" fill="#FFD37A" opacity=".9"/>'
      +'<path d="M96 2c6 6 7 13 3 19 4-7 2-13-3-19Z" fill="#FF8A2B" opacity=".85"/>':"";
+  const spark=kind==="bolt"
+    ?'<path d="M100 0l-9 11h7l-6 12 12-13h-7z" fill="#FFF3B0"/>'
+     +'<path d="M88 1l-7 9h6l-5 10 10-11h-6z" fill="#F5C518" opacity=".9"/>':"";
   const ring=kind==="snipe"
     ?'<circle cx="106" cy="13" r="11" fill="none" stroke="#CDF3FF" stroke-width="1.6" opacity=".9"/>':"";
   return '<svg viewBox="0 0 118 26" xmlns="http://www.w3.org/2000/svg">'
@@ -3758,7 +3772,7 @@ function arrowSvg(kind){
    +'<g transform="translate(106 13) rotate(-90) scale(.95)">'
    +'<path d="'+HEART_D+'" fill="'+c.a+'"/>'
    +'<path d="M-4.5-9C-7.6-9-10-6.5-10-3.4c0 1 .2 2.1.8 3.4C-10-4-7-7.6-3.6-7.3Z" fill="'+c.b+'"/></g>'
-   +flame+'</svg>';
+   +flame+spark+'</svg>';
 }
 function bowSvg(kind){
   const c=ARROW_COL[kind]||ARROW_COL.normal;
@@ -3879,8 +3893,24 @@ function shootArrow(){
       const px=p.lx*(BW/VW),py=p.ly*(BH/vh());
       if(kind==="fire")flameBurst(b,px,py);
       else if(kind==="snipe")snipeBurst(b,px,py);
+      else if(kind==="bolt")flameBurst(b,px,py);
       else heartBurst(b,px,py);
       arrowHit(p);
+      if(kind==="bolt"){
+        const ns=neighborsOf(p);
+        if(ns.length){
+          boltFx(b,px,py,ns.map(q=>[q.lx*(BW/VW),q.ly*(BH/vh())]));
+          const third=Math.max(1,Math.round(step()/3));
+          ns.forEach((q,i)=>setTimeout(()=>{
+            const qx=q.lx*(BW/VW),qy=q.ly*(BH/vh());
+            const r2=document.createElement("div");
+            r2.className="dartHit";r2.style.left=qx+"px";r2.style.top=qy+"px";
+            r2.style.borderColor="#FFE066";
+            b.appendChild(r2);setTimeout(()=>r2.remove(),500);
+            hitPiece(q,1,true,third);
+          },90+i*60));
+        }
+      }
       if(kind==="fire"){
         const q=nearPiece(p);
         if(q){
@@ -3921,6 +3951,52 @@ function heartBurst(host,x,y){
     host.appendChild(h);
     setTimeout(()=>h.remove(),1100);
   }
+}
+function neighborsOf(p){
+  const m=/^d(\d+)_(\d+)$/.exec(p.k||"");
+  const by={};S.pieces.forEach(q=>by[q.k]=q);
+  const out=[];
+  if(m){                                   // ダーツは輪と扇の並びで隣を決める
+    const band=+m[1],sec=+m[2];
+    const secs=S.pieces.filter(q=>/^d\d+_/.test(q.k)&&q.k.startsWith("d"+band+"_")).length||1;
+    [["d"+band+"_"+((sec+1)%secs)],["d"+band+"_"+((sec-1+secs)%secs)],
+     ["d"+(band+1)+"_"+sec],["d"+(band-1)+"_"+sec]].forEach(([k])=>{
+      const q=by[k];if(q&&!q.open&&!q.follow)out.push(q);
+    });
+    if(band===0){const q=by["dOut"];if(q&&!q.open)out.push(q)}
+    return out;
+  }
+  const a=dBox(p),mg=Math.max(a.w,a.h)*.22;
+  return S.pieces.filter(q=>{
+    if(q===p||q.follow||q.open)return false;
+    const b=dBox(q);
+    return a.x-mg<b.x+b.w&&a.x+a.w+mg>b.x&&a.y-mg<b.y+b.h&&a.y+a.h+mg>b.y;
+  });
+}
+function boltFx(host,x0,y0,pts){
+  const NS="http://www.w3.org/2000/svg";
+  const sv=document.createElementNS(NS,"svg");
+  sv.setAttribute("class","boltfx");
+  sv.setAttribute("viewBox","0 0 "+BW+" "+BH);
+  sv.setAttribute("preserveAspectRatio","none");
+  pts.forEach(([x1,y1])=>{
+    let d="M"+x0.toFixed(1)+","+y0.toFixed(1);
+    const nx=-(y1-y0),ny=(x1-x0),ln=Math.hypot(nx,ny)||1,n=5;
+    for(let i=1;i<n;i++){
+      const t=i/n,mx=x0+(x1-x0)*t,my=y0+(y1-y0)*t;
+      const off=(Math.random()-.5)*Math.min(38,ln*.26);
+      d+=" L"+(mx+nx/ln*off).toFixed(1)+","+(my+ny/ln*off).toFixed(1);
+    }
+    d+=" L"+x1.toFixed(1)+","+y1.toFixed(1);
+    ["bolt-glow","bolt-core"].forEach(c=>{
+      const q=document.createElementNS(NS,"path");
+      q.setAttribute("d",d);q.setAttribute("class",c);sv.appendChild(q);
+    });
+  });
+  host.appendChild(sv);
+  const fl=document.createElement("div");
+  fl.className="boltFlash";host.appendChild(fl);
+  setTimeout(()=>{sv.remove();fl.remove()},640);
 }
 function nearPiece(p){
   let best=null,bd=1e18;
