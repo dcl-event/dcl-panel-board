@@ -193,6 +193,8 @@ button{cursor:pointer}
 .fx-spark{opacity:0;transform-box:fill-box;transform-origin:center;
   animation:fxspark 2.4s ease-in-out infinite}
 @keyframes fxspark{0%,100%{opacity:0;transform:scale(.25)}45%{opacity:1;transform:scale(1)}}
+/* 当たり判定はマスの内側だけ。太い枠線が隣のマスにかぶって誤選択するのを防ぐ */
+.piece .face{pointer-events:fill}
 .mode-edit .piece{cursor:pointer}
 .mode-live .piece{cursor:pointer}
 #sea .wv{animation:seaflow linear infinite;will-change:transform}
@@ -1066,7 +1068,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:47</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:48</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
