@@ -289,6 +289,27 @@ button{cursor:pointer}
   box-shadow:0 3px 12px rgba(245,179,60,.3)}
 .bigbtn.plus:hover{background:#FFC658}
 .bigbtn.minus{background:var(--ink);color:var(--minus);border-color:#4A2E38}
+.bigbtn.shoot{display:none;background:linear-gradient(180deg,#3B2A38,#2A1E28);color:#FFD9EC;
+  border-color:#6B4A5E}
+.mode-live.darts .bigbtn.shoot{display:flex}
+.bigbtn.shoot.hold{background:linear-gradient(180deg,#7A2348,#541530);color:#fff;border-color:#FF7BB5}
+#bow{position:absolute;left:50%;bottom:-4px;width:min(48%,340px);z-index:26;
+  transform:translate(-50%,22px);opacity:0;pointer-events:none;transition:opacity .18s,transform .2s}
+#bow.on{opacity:1;transform:translate(-50%,0)}
+#bow svg{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
+.arrowfly{position:absolute;z-index:27;width:118px;height:26px;margin:-13px 0 0 -118px;
+  pointer-events:none;transform-origin:100% 50%;opacity:0;
+  transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--a,0deg)) scale(.5)}
+.arrowfly.go{opacity:1;transform:translate(0,0) rotate(var(--a,0deg)) scale(1);
+  transition:transform .4s cubic-bezier(.4,.02,.9,.55),opacity .08s linear}
+.hpop{position:absolute;z-index:27;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;
+  animation:hpopOut .78s cubic-bezier(.2,.9,.4,1) forwards}
+@keyframes hpopOut{0%{transform:translate(0,0) scale(.3) rotate(0);opacity:0}
+  18%{opacity:1}
+  100%{transform:translate(var(--hx),var(--hy)) scale(var(--hs,1)) rotate(var(--hr,0deg));opacity:0}}
+.hpop svg{width:100%;height:100%;display:block}
+.arrowfly svg{width:100%;height:100%;display:block;overflow:visible;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
 .bigbtn.minus:hover{border-color:var(--minus);background:#26161C}
 .bigbtn:active{transform:translateY(1px)}
 .bigbtn[disabled]{opacity:.3;cursor:default;transform:none}
@@ -720,6 +741,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="stage" id="stage" data-bg="dark">
         <div class="board" id="board"><svg id="frame"></svg><div id="ttl"><svg id="ttlDeco"></svg><span id="ttlTx"></span></div><video id="rvid" playsinline muted loop hidden></video><video id="cvid" playsinline muted loop></video><canvas id="ccv"></canvas><div id="stkBack"></div><svg id="svg"></svg><canvas id="seafx"></canvas><div id="stk"></div><textarea id="inlineEdit" spellcheck="false"></textarea><canvas id="fxcv"></canvas></div>
         <canvas id="dragfx"></canvas>
+        <div id="bow" aria-hidden="true"></div>
       </div>
       <div class="bargrip" id="barGrip" title="上下にドラッグでカウンター欄の大きさを変える／ダブルクリックで既定に戻す"></div>
       <div class="livebar" id="livebar">
@@ -731,6 +753,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
         <div class="bigrow">
           <button class="bigbtn minus" id="btnMinus" disabled>−<span id="minusV">1,000</span></button>
           <button class="bigbtn plus" id="btnPlus" disabled>＋<span id="plusV">1,000</span></button>
+          <button class="bigbtn shoot" id="btnShoot">🏹<span>長押しで射る</span></button>
         </div>
         <div>
           <div class="eyebrow">加算量</div>
@@ -990,7 +1013,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:51</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:57</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -3441,6 +3464,7 @@ function setMode(edit){
   $("app").classList.toggle("show-rail",!edit&&!!S.liveRail);
   $("btnRail").setAttribute("aria-pressed",!edit&&!!S.liveRail);
   $("app").classList.toggle("mode-live",!edit);
+  $("app").classList.toggle("darts",S.pattern==="darts");
   $("mEdit").setAttribute("aria-pressed",edit);
   $("mLive").setAttribute("aria-pressed",!edit);
   if(!edit)sel=new Set();else setCur(null);
@@ -3510,6 +3534,7 @@ $("patterns").addEventListener("click",e=>{
     if(S.img.revealOn!==false){S.img.revealOn=false;S.img._autoOff=true}
   }else if(wasJp&&S.img._autoOff){S.img.revealOn=true;S.img._autoOff=false}
   rebuild();
+  $("app").classList.toggle("darts",S.pattern==="darts");
   drawPatterns();patOpts();applyImages();render();layout();seaSchedule();save();
 });
 $("chips").addEventListener("click",e=>{
@@ -3524,6 +3549,14 @@ $("freeStep").addEventListener("input",()=>{
 });
 $("clickAdd").addEventListener("change",()=>paintCur());
 $("btnPlus").onclick=()=>{if(cur)hitPiece(cur,1)};
+(function(){
+  const b=$("btnShoot");
+  b.addEventListener("pointerdown",ev=>{ev.preventDefault();bowStart();
+    try{b.setPointerCapture(ev.pointerId)}catch(e){}});
+  b.addEventListener("pointerup",bowRelease);
+  b.addEventListener("pointercancel",bowRelease);
+  b.addEventListener("pointerleave",()=>{if(bowSt)bowRelease()});
+})();
 $("btnMinus").onclick=()=>{if(cur)hitPiece(cur,-1)};
 function setZoom(v,keepPan){
   S.zoom=clamp(+(+v).toFixed(3),.3,4);
@@ -3649,15 +3682,133 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
   syncTitleUI();renderTitle();save();
 });
 /* ダーツ：ボタンを押すと矢が飛んでくる */
-const DART_SVG='<svg viewBox="0 0 96 24" xmlns="http://www.w3.org/2000/svg">'
- +'<path d="M34 7.5L6 2.5l7.5 9.5L6 21.5l28-5z" fill="#E8447A"/>'
- +'<path d="M34 7.5L6 2.5l7.5 9.5z" fill="#FF8FC0"/>'
- +'<rect x="30" y="10.4" width="14" height="3.2" rx="1.6" fill="#8892A8"/>'
- +'<rect x="42" y="8" width="28" height="8" rx="4" fill="#6E7891"/>'
- +'<rect x="42" y="8" width="28" height="3.4" rx="1.7" fill="#A9B3C8"/>'
- +'<path d="M70 9.4h8l1 2.6-1 2.6h-8z" fill="#4A5266"/>'
- +'<path d="M78 9.4L94 12l-16 2.6z" fill="#D9E2F0"/>'
- +'<path d="M78 9.4L94 12l-16 1.2z" fill="#FFFFFF"/></svg>';
+const HEART_D="M0 9C-8 3.5-10-.4-10-3.4-10-6.5-7.6-9-4.5-9-2.7-9-1-8.1 0-6.7 1-8.1 2.7-9 4.5-9 7.6-9 10-6.5 10-3.4 10-.4 8 3.5 0 9Z";
+const DART_SVG='<svg viewBox="0 0 118 26" xmlns="http://www.w3.org/2000/svg">'
+ +'<path d="M8 5.5l26 4.4v2.8L8 12.5z" fill="#FF8FC0"/>'
+ +'<path d="M8 20.5l26-4.4v-2.8L8 13.5z" fill="#E8447A"/>'
+ +'<path d="M6 8.5l8 4.5-8 4.5z" fill="#F2F2F5"/>'
+ +'<rect x="26" y="11.6" width="76" height="2.8" rx="1.4" fill="#C9A06A"/>'
+ +'<rect x="26" y="11.6" width="76" height="1.2" rx=".6" fill="#EAC38C"/>'
+ +'<g transform="translate(106 13) rotate(-90) scale(.95)">'
+ +'<path d="'+HEART_D+'" fill="#FF2E80"/>'
+ +'<path d="M-4.5-9C-7.6-9-10-6.5-10-3.4c0 1 .2 2.1.8 3.4C-10-4-7-7.6-3.6-7.3Z" fill="#FFA7CE"/></g></svg>';
+const BOW_SVG='<svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg">'
+ +'<path d="M26 186C6 120 40 26 130 26s124 94 104 160" fill="none" stroke="#7A4A22" stroke-width="12" stroke-linecap="round"/>'
+ +'<path d="M26 186C6 120 40 26 130 26s124 94 104 160" fill="none" stroke="#B07A38" stroke-width="5" stroke-linecap="round"/>'
+ +'<polyline id="bwString" points="26,186 130,186 234,186" fill="none" stroke="#F2ECE0" stroke-width="3.2" stroke-linejoin="round"/>'
+ +'<g id="bwArrow">'
+ +'<rect x="126" y="36" width="7" height="156" rx="3.5" fill="#C9A06A"/>'
+ +'<rect x="126" y="36" width="3" height="156" rx="1.5" fill="#EAC38C"/>'
+ +'<path d="M126 190l-12 9v-24z" fill="#FF8FC0"/>'
+ +'<path d="M133 190l12 9v-24z" fill="#E8447A"/>'
+ +'<g transform="translate(129.5 30) scale(1.75) rotate(180)">'
+ +'<path d="'+HEART_D+'" fill="#FF2E80"/>'
+ +'<path d="M-4.5-9C-7.6-9-10-6.5-10-3.4c0 1 .2 2.1.8 3.4C-10-4-7-7.6-3.6-7.3Z" fill="#FFA7CE"/></g></g></svg>';
+let bowSt=null;
+function bowPull(v){
+  const sv=$("bow").firstChild;if(!sv)return;
+  const st=sv.querySelector("#bwString"),ar=sv.querySelector("#bwArrow");
+  if(st)st.setAttribute("points","26,186 130,"+(186+v)+" 234,186");
+  if(ar)ar.setAttribute("transform","translate(0,"+v+")");
+}
+function bowTick(){
+  if(!bowSt)return;
+  const k=Math.min(1,(performance.now()-bowSt.t0)/620);
+  bowPull(k*74);
+  bowSt.k=k;
+  requestAnimationFrame(bowTick);
+}
+function bowStart(){
+  if(bowSt||S.pattern!=="darts")return;
+  const el=$("bow");
+  if(!el.firstChild)el.innerHTML=BOW_SVG;
+  const sv0=el.firstChild,ar0=sv0&&sv0.querySelector("#bwArrow");
+  if(ar0){ar0.setAttribute("opacity","1");ar0.setAttribute("transform","translate(0,0)")}
+  bowPull(0);el.classList.add("on");
+  $("btnShoot").classList.add("hold");
+  bowSt={t0:performance.now(),k:0};
+  bowTick();
+}
+function bowRelease(){
+  if(!bowSt)return;
+  const k=bowSt.k;bowSt=null;
+  $("btnShoot").classList.remove("hold");
+  const sv=$("bow").firstChild,ar=sv&&sv.querySelector("#bwArrow");
+  bowPull(-10);
+  setTimeout(()=>bowPull(0),90);
+  if(k>=.12&&ar){                         // 矢は弦を離れて飛び出していく
+    const t0=performance.now(),from=k*74;
+    const fly=()=>{
+      const t=Math.min(1,(performance.now()-t0)/150);
+      ar.setAttribute("transform","translate(0,"+(from-(from+330)*t*t)+")");
+      ar.setAttribute("opacity",t>.7?String(Math.max(0,(1-t)/.3)):"1");
+      if(t<1)requestAnimationFrame(fly);
+      else ar.setAttribute("opacity","0");
+    };
+    requestAnimationFrame(fly);
+  }
+  setTimeout(()=>$("bow").classList.remove("on"),340);
+  if(k<.12)return;                        // ちょい押しは空撃ち
+  shootArrow();
+}
+function shootArrow(){
+  const live=S.pieces.filter(q=>!q.follow&&!q.open);
+  if(!live.length)return;
+  const p=live[(Math.random()*live.length)|0];
+  const st=$("stage"),b=$("board");
+  const sr=st.getBoundingClientRect(),br=b.getBoundingClientRect();
+  const tx=br.left-sr.left+p.lx*(BW/VW),ty=br.top-sr.top+p.ly*(BH/vh());
+  const fx=sr.width/2,fy=sr.height+40;
+  const el=document.createElement("div");
+  el.className="arrowfly";el.innerHTML=DART_SVG;
+  el.style.left=tx+"px";el.style.top=ty+"px";
+  el.style.setProperty("--a",(Math.atan2(ty-fy,tx-fx)*180/Math.PI).toFixed(1)+"deg");
+  el.style.setProperty("--dx",(fx-tx).toFixed(1)+"px");
+  el.style.setProperty("--dy",(fy-ty).toFixed(1)+"px");
+  st.appendChild(el);
+  frameTick(()=>el.classList.add("go"));
+  setTimeout(()=>{
+    el.classList.add("hit");
+    const ring=document.createElement("div");
+    ring.className="dartHit";
+    ring.style.left=(p.lx*(BW/VW))+"px";ring.style.top=(p.ly*(BH/vh()))+"px";
+    ring.style.borderColor="#FF6FAB";
+    b.appendChild(ring);setTimeout(()=>ring.remove(),500);
+    heartBurst(b,p.lx*(BW/VW),p.ly*(BH/vh()));
+    openByArrow(p);
+  },400);
+  setTimeout(()=>el.remove(),2200);
+}
+const HEART_SVG='<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+ +'<path d="M12 21C4 15.5 2 11.6 2 8.6 2 5.5 4.4 3 7.5 3c1.8 0 3.5.9 4.5 2.3C13 3.9 14.7 3 16.5 3 19.6 3 22 5.5 22 8.6c0 3-2 6.9-10 12.4Z" fill="#FF3D8A"/>'
+ +'<path d="M12 8.4C11 6.4 9.4 5.2 7.6 5.2c-1.6 0-3 1.2-3.3 2.8 1-2 4.7-2.2 7.7 .4Z" fill="#FFA7CE"/></svg>';
+function heartBurst(host,x,y){
+  for(let i=0;i<6;i++){
+    const h=document.createElement("div");
+    h.className="hpop";h.innerHTML=HEART_SVG;
+    h.style.left=x+"px";h.style.top=y+"px";
+    const a=-Math.PI/2+(i-2.5)*.42,d=26+Math.random()*26;
+    h.style.setProperty("--hx",(Math.cos(a)*d).toFixed(1)+"px");
+    h.style.setProperty("--hy",(Math.sin(a)*d-14).toFixed(1)+"px");
+    h.style.setProperty("--hs",(.7+Math.random()*.8).toFixed(2));
+    h.style.setProperty("--hr",((Math.random()-.5)*90).toFixed(0)+"deg");
+    h.style.animationDelay=(i*35)+"ms";
+    host.appendChild(h);
+    setTimeout(()=>h.remove(),1100);
+  }
+}
+function openByArrow(p){
+  if(!p||p.open)return;
+  pushUndo();
+  p.got=Math.max(p.got,p.need>0?p.need:1);
+  p.open=true;p._t0=performance.now();
+  const g=p._g;
+  if(g){
+    g.classList.add("pop");
+    setTimeout(()=>{g.classList.remove("pop");g.classList.add("is-open");render(true)},70);
+  }else render(true);
+  setCur(p);paintCur();save();
+}
 function throwDart(p){
   if(!BW||!BH||!p)return;
   if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
@@ -5197,7 +5348,7 @@ drawFrames();drawTitleFonts();drawPanelFonts();
 $("tEmoRow").querySelector(".grow").innerHTML=emoRow("tText");
 enhanceAll(document);
 foldSections();
-syncUI();applyRailW();applyBarZ();applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
+syncUI();applyRailW();applyBarZ();$("app").classList.toggle("darts",S.pattern==="darts");applyImages();drawPatterns();patOpts();render();drawStk();stkUI();syncUndoUI();
 seaSchedule();
 (function(){/* 隠しコマンド：fish＝魚 / big＝大物 / ryu＝龍 */
   let buf="";
