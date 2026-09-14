@@ -1065,7 +1065,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:39</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:44</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1458,7 +1458,8 @@ function genPieces(pat,W,H,o){
         const room=Math.min(th,arc,edge*.52);
         const m=room*.3;
         const lx=clamp(cx+Math.cos(am)*rm,m,W-m),ly=clamp(cy+Math.sin(am)*rm,m,H-m);
-        push("d"+b+"_"+i,wedge(r0,r1,a0,a1),lx,ly,room*.95);
+        push("d"+b+"_"+i,wedge(r0,r1,a0,a1),lx,ly,room*.95,
+          b===bands-1?{edge:{x:cx,y:cy,r:Rin*.995}}:null);
       }
     }
     push("dOut",ring(rb,ro),cx,cy-(rb+ro)/2,(ro-rb)*1.1);
@@ -2248,6 +2249,12 @@ function render(keepInspector){
     cp.appendChild(el("path",{d:p.d}));
     defs.appendChild(cp);
   });
+  const eg=S.pieces.find(q=>q.edge);
+  if(eg){
+    const cp=el("clipPath",{id:"edgeclip"});
+    cp.appendChild(el("circle",{cx:eg.edge.x,cy:eg.edge.y,r:eg.edge.r}));
+    defs.appendChild(cp);
+  }
   S.pieces.forEach((p,i)=>{
     if(!p.bc&&!(p.bwm&&p.bwm!==1))return;      // 当たり枠だけ
     const cp=el("clipPath",{id:"ec"+i});
@@ -2288,7 +2295,14 @@ function render(keepInspector){
       "stroke-linejoin":"round",class:"face"});
     if(lit)g.setAttribute("style","--lc:"+litC);
     if(p.clip)path.setAttribute("clip-path","url(#pc"+i+")");
-    g.appendChild(path);
+    if(p.edge){                               // 四隅にはみ出す帯は、円の外に線を引かない
+      path.setAttribute("stroke","none");
+      g.appendChild(path);
+      const w2=st.bWidth*(p.bwm||1);
+      if(w2>0)g.appendChild(el("path",{d:p.d,fill:"none",
+        stroke:lit?litC:(p.bc||st.bColor),"stroke-width":w2,
+        "stroke-linejoin":"round","clip-path":"url(#edgeclip)"}));
+    }else g.appendChild(path);
     if(p.frozen&&!p.open){
       const ice=el("path",{d:p.d,fill:"rgba(150,220,255,.42)",stroke:"#E6F8FF",
         "stroke-width":Math.max(2,st.bWidth*.9),class:"icefilm"});
@@ -2368,6 +2382,7 @@ function render(keepInspector){
     if(w<=0)return;
     const e=el("path",{d:p.d,fill:"none",stroke:p.bc||st.bColor,
       "stroke-width":w*2,"stroke-linejoin":"round","clip-path":"url(#ec"+i+")"});
+    if(p.edge)e.setAttribute("clip-path","url(#ec"+i+")");
     if(p.cut&&S.cut)e.setAttribute("mask","url(#cutmask)");
     gEdge.appendChild(e);
   });
@@ -3911,13 +3926,13 @@ function shootArrow(){
       b.appendChild(ring);setTimeout(()=>ring.remove(),500);
       const px=p.lx*(BW/VW),py=p.ly*(BH/vh());
       const wasFrozen=!!p.frozen;
-      S.pieces.forEach(q=>{if(q.frozen&&q!==p)q.frozen=false});   // 凍結は次の一射まで
+      thawAll(p);                                  // 凍結は次の一射まで
       if(kind==="fire")flameBurst(b,px,py);
       else if(kind==="snipe")snipeBurst(b,px,py);
       else if(kind==="bolt")flameBurst(b,px,py);
       else heartBurst(b,px,py);
       if(wasFrozen){
-        p.frozen=false;
+        unfreezePiece(p);
         iceBurst(b,px,py,true);
         const t3=document.createElement("div");
         t3.className="x3tag";t3.textContent="×3";
@@ -3926,7 +3941,7 @@ function shootArrow(){
       }
       if(kind==="ice"&&!wasFrozen)iceBurst(b,px,py,false);
       arrowHit(p,wasFrozen?3:1);
-      if(kind==="ice"&&!p.open){p.frozen=true;render(true)}
+      if(kind==="ice"&&!p.open)setTimeout(()=>freezePiece(p),120);
       if(kind==="bolt"){
         const ns=neighborsOf(p);
         if(ns.length){
@@ -3957,7 +3972,7 @@ function shootArrow(){
         }
       }
     }else{
-      S.pieces.forEach(q=>{if(q.frozen){q.frozen=false}});render(true);
+      thawAll(null);
       const t=document.createElement("div");
       t.className="missTag";t.textContent="はずれ";
       t.style.left=tx+"px";t.style.top=(ty-26)+"px";
@@ -4038,6 +4053,32 @@ function nearPiece(p){
     if(d<bd){bd=d;best=q}
   });
   return best;
+}
+function iceFilmFor(p){
+  const st=S.style;
+  const ice=el("path",{d:p.d,fill:"rgba(150,220,255,.42)",stroke:"#E6F8FF",
+    "stroke-width":Math.max(2,st.bWidth*.9),class:"icefilm"});
+  if(p.clip)ice.setAttribute("clip-path","url(#pc"+p.i+")");
+  if(p.cut&&S.cut)ice.setAttribute("mask","url(#cutmask)");
+  return ice;
+}
+function freezePiece(p){
+  if(!p||p.open)return;
+  p.frozen=true;
+  const g=p._g;
+  if(g&&!g.querySelector(".icefilm")){
+    const face=g.querySelector(".face");
+    g.insertBefore(iceFilmFor(p),face?face.nextSibling:g.firstChild);
+  }
+}
+function unfreezePiece(p){
+  if(!p||!p.frozen)return;
+  p.frozen=false;
+  const g=p._g,f=g&&g.querySelector(".icefilm");
+  if(f)f.remove();
+}
+function thawAll(except){
+  S.pieces.forEach(q=>{if(q.frozen&&q!==except)unfreezePiece(q)});
 }
 function iceBurst(host,x,y,big){
   const n=big?14:8;
