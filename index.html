@@ -319,6 +319,14 @@ button{cursor:pointer}
 #reticle::before{left:50%;top:-10px;width:2px;height:78px;margin-left:-1px}
 #reticle::after{top:50%;left:-10px;height:2px;width:78px;margin-top:-1px}
 @keyframes retPulse{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.12);opacity:.7}}
+.icefilm{pointer-events:none;animation:iceBreathe 2.4s ease-in-out infinite}
+@keyframes iceBreathe{0%,100%{opacity:.85}50%{opacity:1}}
+.x3tag{position:absolute;z-index:28;transform:translate(-50%,-50%);pointer-events:none;
+  font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 0 #2B7FB0,0 0 16px #8FD8FF;
+  animation:x3pop .9s cubic-bezier(.2,1.5,.4,1) forwards}
+@keyframes x3pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.4) rotate(-12deg)}
+  30%{opacity:1;transform:translate(-50%,-60%) scale(1.15) rotate(4deg)}
+  100%{opacity:0;transform:translate(-50%,-130%) scale(1) rotate(0)}}
 .boltfx{position:absolute;inset:0;width:100%;height:100%;z-index:24;pointer-events:none;
   overflow:visible;animation:boltFlick .62s steps(1) forwards}
 .boltfx .bolt-glow{fill:none;stroke:#FFE066;stroke-width:8;stroke-linejoin:round;opacity:.5;
@@ -796,6 +804,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           <button data-k="normal" aria-pressed="true">💘<i>ふつう</i></button>
           <button data-k="fire" aria-pressed="false">🔥<i>炎</i></button>
           <button data-k="bolt" aria-pressed="false">⚡<i>雷</i></button>
+          <button data-k="ice" aria-pressed="false">❄️<i>氷</i></button>
           <button data-k="snipe" aria-pressed="false">🎯<i>スナイプ</i></button>
         </div>
         <div>
@@ -1056,7 +1065,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:35</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:39</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1593,7 +1602,7 @@ function sampleImage(){
 }
 
 /* fields that belong to a panel rather than to the pattern */
-const CARRY=["need","got","open","label","auto","pc","bc","bwm","glow","fx","fxc","ic","icS","iX","iY","tx","ty","tS"];
+const CARRY=["need","got","open","label","auto","pc","bc","bwm","glow","fx","fxc","ic","icS","iX","iY","tx","ty","tS","frozen"];
 const pick=p=>{const o={k:p.k};CARRY.forEach(f=>o[f]=p[f]);return o};
 function applyTo(p,o){if(!o)return;CARRY.forEach(f=>{if(o[f]!==undefined)p[f]=o[f]})}
 
@@ -1605,7 +1614,7 @@ function rebuild(){
   pieces.forEach((p,i)=>{
     p.need=1000;p.got=0;p.open=false;
     p.label=p.dl||"1000";p.auto=!p.dl;
-    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.iX=0;p.iY=0;p.tx=0;p.ty=0;p.tS=1;
+    p.pc=null;p.bc=null;p.bwm=1;p.glow=false;p.fx="none";p.fxc=null;p.ic=null;p.icS=1;p.iX=0;p.iY=0;p.tx=0;p.ty=0;p.tS=1;p.frozen=false;
     applyTo(p,old[p.k]);
     if(!p.fx)p.fx="none";
     if(p.fxc===GOLD)p.fxc=null;   // 旧データの既定値は「枠線に合わせる」扱い
@@ -2280,6 +2289,13 @@ function render(keepInspector){
     if(lit)g.setAttribute("style","--lc:"+litC);
     if(p.clip)path.setAttribute("clip-path","url(#pc"+i+")");
     g.appendChild(path);
+    if(p.frozen&&!p.open){
+      const ice=el("path",{d:p.d,fill:"rgba(150,220,255,.42)",stroke:"#E6F8FF",
+        "stroke-width":Math.max(2,st.bWidth*.9),class:"icefilm"});
+      if(p.clip)ice.setAttribute("clip-path","url(#pc"+i+")");
+      if(p.cut&&S.cut)ice.setAttribute("mask","url(#cutmask)");
+      g.appendChild(ice);
+    }
     if(!p.open&&p.fx&&p.fx!=="none"){
       const fc=fxOf(p),b=dBox(p);
       if(p.fx==="breathe"){
@@ -3750,7 +3766,8 @@ const ARROW_COL={
   normal:{a:"#FF2E80",b:"#FFA7CE",f1:"#FF8FC0",f2:"#E8447A"},
   fire:  {a:"#FF5A12",b:"#FFD37A",f1:"#FFB347",f2:"#FF6B2C"},
   snipe: {a:"#12B8E8",b:"#CDF3FF",f1:"#9EE7FF",f2:"#28A8D8"},
-  bolt:  {a:"#F5C518",b:"#FFF3B0",f1:"#FFE066",f2:"#C79A00"}
+  bolt:  {a:"#F5C518",b:"#FFF3B0",f1:"#FFE066",f2:"#C79A00"},
+  ice:   {a:"#8FD8FF",b:"#EAF9FF",f1:"#CFF1FF",f2:"#5FB6E8"}
 };
 function arrowSvg(kind){
   const c=ARROW_COL[kind]||ARROW_COL.normal;
@@ -3760,6 +3777,8 @@ function arrowSvg(kind){
   const spark=kind==="bolt"
     ?'<path d="M100 0l-9 11h7l-6 12 12-13h-7z" fill="#FFF3B0"/>'
      +'<path d="M88 1l-7 9h6l-5 10 10-11h-6z" fill="#F5C518" opacity=".9"/>':"";
+  const frost=kind==="ice"
+    ?'<path d="M106 1v24M96 5l20 16M116 5L96 21" stroke="#EAF9FF" stroke-width="1.4" opacity=".85"/>':"";
   const ring=kind==="snipe"
     ?'<circle cx="106" cy="13" r="11" fill="none" stroke="#CDF3FF" stroke-width="1.6" opacity=".9"/>':"";
   return '<svg viewBox="0 0 118 26" xmlns="http://www.w3.org/2000/svg">'
@@ -3772,7 +3791,7 @@ function arrowSvg(kind){
    +'<g transform="translate(106 13) rotate(-90) scale(.95)">'
    +'<path d="'+HEART_D+'" fill="'+c.a+'"/>'
    +'<path d="M-4.5-9C-7.6-9-10-6.5-10-3.4c0 1 .2 2.1.8 3.4C-10-4-7-7.6-3.6-7.3Z" fill="'+c.b+'"/></g>'
-   +flame+spark+'</svg>';
+   +flame+spark+frost+'</svg>';
 }
 function bowSvg(kind){
   const c=ARROW_COL[kind]||ARROW_COL.normal;
@@ -3891,11 +3910,23 @@ function shootArrow(){
       ring.style.borderColor="#FF6FAB";
       b.appendChild(ring);setTimeout(()=>ring.remove(),500);
       const px=p.lx*(BW/VW),py=p.ly*(BH/vh());
+      const wasFrozen=!!p.frozen;
+      S.pieces.forEach(q=>{if(q.frozen&&q!==p)q.frozen=false});   // 凍結は次の一射まで
       if(kind==="fire")flameBurst(b,px,py);
       else if(kind==="snipe")snipeBurst(b,px,py);
       else if(kind==="bolt")flameBurst(b,px,py);
       else heartBurst(b,px,py);
-      arrowHit(p);
+      if(wasFrozen){
+        p.frozen=false;
+        iceBurst(b,px,py,true);
+        const t3=document.createElement("div");
+        t3.className="x3tag";t3.textContent="×3";
+        t3.style.left=px+"px";t3.style.top=py+"px";
+        b.appendChild(t3);setTimeout(()=>t3.remove(),950);
+      }
+      if(kind==="ice"&&!wasFrozen)iceBurst(b,px,py,false);
+      arrowHit(p,wasFrozen?3:1);
+      if(kind==="ice"&&!p.open){p.frozen=true;render(true)}
       if(kind==="bolt"){
         const ns=neighborsOf(p);
         if(ns.length){
@@ -3926,6 +3957,7 @@ function shootArrow(){
         }
       }
     }else{
+      S.pieces.forEach(q=>{if(q.frozen){q.frozen=false}});render(true);
       const t=document.createElement("div");
       t.className="missTag";t.textContent="はずれ";
       t.style.left=tx+"px";t.style.top=(ty-26)+"px";
@@ -4007,6 +4039,22 @@ function nearPiece(p){
   });
   return best;
 }
+function iceBurst(host,x,y,big){
+  const n=big?14:8;
+  for(let i=0;i<n;i++){
+    const h=document.createElement("div");
+    h.className="hpop";
+    h.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 1l3 7 7-3-3 7 3 7-7-3-3 7-3-7-7 3 3-7-3-7 7 3z" fill="#CFF1FF" opacity=".95"/></svg>';
+    h.style.left=x+"px";h.style.top=y+"px";
+    const a=i/n*Math.PI*2,d=(big?34:22)+Math.random()*(big?40:26);
+    h.style.setProperty("--hx",(Math.cos(a)*d).toFixed(1)+"px");
+    h.style.setProperty("--hy",(Math.sin(a)*d).toFixed(1)+"px");
+    h.style.setProperty("--hs",(.5+Math.random()*.8).toFixed(2));
+    h.style.setProperty("--hr",((Math.random()-.5)*160).toFixed(0)+"deg");
+    h.style.animationDelay=(i*22)+"ms";
+    host.appendChild(h);setTimeout(()=>h.remove(),1100);
+  }
+}
 function snipeBurst(host,x,y){
   for(let i=0;i<3;i++){
     const r=document.createElement("div");
@@ -4043,10 +4091,10 @@ function flameBurst(host,x,y){
     setTimeout(()=>h.remove(),1100);
   }
 }
-function arrowHit(p){
+function arrowHit(p,mul){
   if(!p||p.open)return;
-  setCur(p);                       // 当たったマスを選んだ状態にしてから
-  hitPiece(p,1,true);              // 加算量ぶん足す（届けば開く）
+  setCur(p);                                  // 当たったマスを選んだ状態にしてから
+  hitPiece(p,1,true,step()*(mul||1));          // 加算量ぶん（凍っていたら3倍）
 }
 function throwDart(p){
   if(!BW||!BH||!p)return;
