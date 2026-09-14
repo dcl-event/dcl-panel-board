@@ -302,6 +302,13 @@ button{cursor:pointer}
   transform:translate(var(--dx,0),var(--dy,0)) rotate(var(--a,0deg)) scale(.5)}
 .arrowfly.go{opacity:1;transform:translate(0,0) rotate(var(--a,0deg)) scale(1);
   transition:transform .4s cubic-bezier(.4,.02,.9,.55),opacity .08s linear}
+.missTag{position:absolute;z-index:28;transform:translate(-50%,-50%);pointer-events:none;
+  font-size:13px;font-weight:800;color:#fff;background:rgba(30,24,34,.82);
+  border:1.5px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 11px;white-space:nowrap;
+  animation:missUp 1.1s ease-out forwards}
+@keyframes missUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-120%) scale(1)}}
 .hpop{position:absolute;z-index:27;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;
   animation:hpopOut .78s cubic-bezier(.2,.9,.4,1) forwards}
 @keyframes hpopOut{0%{transform:translate(0,0) scale(.3) rotate(0);opacity:0}
@@ -1013,7 +1020,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:57</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:04</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -2938,7 +2945,10 @@ function patOpts(){
   if(S.pattern==="darts"){
     h+=stepRow("rings",Math.max(2,Math.min(6,o.rings||3)),2,6,"輪の数")
       +stepRow("sectors",Math.max(3,Math.min(20,o.sectors||10)),3,20,"分割数")
-      +`<div class="row"><label></label><span class="hint" style="margin:0">まん中はブル（1点）とアウターブル。外の輪は盤面のすみまで届きます。</span></div>`;
+      +`<div class="row"><label>当たる確率</label>
+          <input type="range" class="rng" data-u="pct" data-k="hitRate" min="0.3" max="1" step="0.05" value="${S.opt.hitRate==null?.75:S.opt.hitRate}">
+          <span class="val">${Math.round((S.opt.hitRate==null?.75:S.opt.hitRate)*100)}%</span></div>`
+      +`<div class="row"><label></label><span class="hint" style="margin:0">まん中はブル（1点）とアウターブル。外の輪は盤面のすみまで届きます。<br>外すと矢は盤面の外に刺さって「はずれ」と出ます。当たったマスには<b style="color:var(--muted)">加算量</b>ぶん入ります。</span></div>`;
   }
   if(S.pattern==="jigsaw")h+=`<div class="btnrow" style="margin-top:8px"><button class="tbtn" id="reseed">形をシャッフル</button></div>`;
   if(S.pattern==="japan"){
@@ -3383,7 +3393,7 @@ function drawMarq(){
 }
 function clearPre(){S.pieces.forEach(q=>{if(q._g)q._g.classList.remove("pre")})}
 function step(){const f=+$("freeStep").value;return f>0?f:S.step}
-function hitPiece(p,dir){
+function hitPiece(p,dir,fromArrow){
   if(!p)return;
   if(dir>0&&p.open)return;
   pushUndo();
@@ -3398,7 +3408,7 @@ function hitPiece(p,dir){
     if(!was&&p.open){
       const litMode=S.pattern==="japan",dartMode=S.pattern==="darts";
       const wait=(litMode||S.fxBurst===false)?70:(dartMode?400:FILL_MS);
-      if(dartMode){p._hideUntil=performance.now()+400;throwDart(p)}
+      if(dartMode){p._hideUntil=performance.now()+400;if(!fromArrow)throwDart(p)}
       else if(!litMode&&S.fxBurst!==false){p._hideUntil=performance.now()+FILL_MS;playBurst()}
       g.classList.add("pop");
       setTimeout(()=>{g.classList.remove("pop");
@@ -3754,10 +3764,20 @@ function bowRelease(){
 function shootArrow(){
   const live=S.pieces.filter(q=>!q.follow&&!q.open);
   if(!live.length)return;
-  const p=live[(Math.random()*live.length)|0];
+  const rate=S.opt.hitRate==null?.75:S.opt.hitRate;
+  const hit=Math.random()<rate;
+  const p=hit?live[(Math.random()*live.length)|0]:null;
   const st=$("stage"),b=$("board");
   const sr=st.getBoundingClientRect(),br=b.getBoundingClientRect();
-  const tx=br.left-sr.left+p.lx*(BW/VW),ty=br.top-sr.top+p.ly*(BH/vh());
+  let tx,ty;
+  if(p){
+    tx=br.left-sr.left+p.lx*(BW/VW);ty=br.top-sr.top+p.ly*(BH/vh());
+  }else{                                   // 外す：盤面のすぐ外へ
+    const a=Math.random()*Math.PI*2,k=1.06+Math.random()*.18;
+    tx=br.left-sr.left+br.width/2+Math.cos(a)*br.width/2*k;
+    ty=br.top-sr.top+br.height/2+Math.sin(a)*br.height/2*k;
+    tx=clamp(tx,14,sr.width-14);ty=clamp(ty,14,sr.height-14);
+  }
   const fx=sr.width/2,fy=sr.height+40;
   const el=document.createElement("div");
   el.className="arrowfly";el.innerHTML=DART_SVG;
@@ -3769,15 +3789,22 @@ function shootArrow(){
   frameTick(()=>el.classList.add("go"));
   setTimeout(()=>{
     el.classList.add("hit");
-    const ring=document.createElement("div");
-    ring.className="dartHit";
-    ring.style.left=(p.lx*(BW/VW))+"px";ring.style.top=(p.ly*(BH/vh()))+"px";
-    ring.style.borderColor="#FF6FAB";
-    b.appendChild(ring);setTimeout(()=>ring.remove(),500);
-    heartBurst(b,p.lx*(BW/VW),p.ly*(BH/vh()));
-    openByArrow(p);
+    if(p){
+      const ring=document.createElement("div");
+      ring.className="dartHit";
+      ring.style.left=(p.lx*(BW/VW))+"px";ring.style.top=(p.ly*(BH/vh()))+"px";
+      ring.style.borderColor="#FF6FAB";
+      b.appendChild(ring);setTimeout(()=>ring.remove(),500);
+      heartBurst(b,p.lx*(BW/VW),p.ly*(BH/vh()));
+      arrowHit(p);
+    }else{
+      const t=document.createElement("div");
+      t.className="missTag";t.textContent="はずれ";
+      t.style.left=tx+"px";t.style.top=(ty-26)+"px";
+      st.appendChild(t);setTimeout(()=>t.remove(),1200);
+    }
   },400);
-  setTimeout(()=>el.remove(),2200);
+  setTimeout(()=>el.remove(),p?2200:1600);
 }
 const HEART_SVG='<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
  +'<path d="M12 21C4 15.5 2 11.6 2 8.6 2 5.5 4.4 3 7.5 3c1.8 0 3.5.9 4.5 2.3C13 3.9 14.7 3 16.5 3 19.6 3 22 5.5 22 8.6c0 3-2 6.9-10 12.4Z" fill="#FF3D8A"/>'
@@ -3797,17 +3824,10 @@ function heartBurst(host,x,y){
     setTimeout(()=>h.remove(),1100);
   }
 }
-function openByArrow(p){
+function arrowHit(p){
   if(!p||p.open)return;
-  pushUndo();
-  p.got=Math.max(p.got,p.need>0?p.need:1);
-  p.open=true;p._t0=performance.now();
-  const g=p._g;
-  if(g){
-    g.classList.add("pop");
-    setTimeout(()=>{g.classList.remove("pop");g.classList.add("is-open");render(true)},70);
-  }else render(true);
-  setCur(p);paintCur();save();
+  setCur(p);                       // 当たったマスを選んだ状態にしてから
+  hitPiece(p,1,true);              // 加算量ぶん足す（届けば開く）
 }
 function throwDart(p){
   if(!BW||!BH||!p)return;
