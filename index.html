@@ -990,7 +990,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:49</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 14:51</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -3650,14 +3650,14 @@ document.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{
 });
 /* ダーツ：ボタンを押すと矢が飛んでくる */
 const DART_SVG='<svg viewBox="0 0 96 24" xmlns="http://www.w3.org/2000/svg">'
- +'<path d="M62 8h30l-8 4 8 4H62z" fill="#E8447A"/>'
- +'<path d="M62 8h30l-8 4H62z" fill="#FF8FC0"/>'
- +'<rect x="52" y="10.5" width="14" height="3" rx="1.5" fill="#8892A8"/>'
- +'<rect x="26" y="8" width="28" height="8" rx="4" fill="#6E7891"/>'
- +'<rect x="26" y="8" width="28" height="3.4" rx="1.7" fill="#A9B3C8"/>'
- +'<path d="M26 9.4h-8l-1 2.6 1 2.6h8z" fill="#4A5266"/>'
- +'<path d="M18 9.4L2 12l16 2.6z" fill="#D9E2F0"/>'
- +'<path d="M18 9.4L2 12l16 1.2z" fill="#FFFFFF"/></svg>';
+ +'<path d="M34 7.5L6 2.5l7.5 9.5L6 21.5l28-5z" fill="#E8447A"/>'
+ +'<path d="M34 7.5L6 2.5l7.5 9.5z" fill="#FF8FC0"/>'
+ +'<rect x="30" y="10.4" width="14" height="3.2" rx="1.6" fill="#8892A8"/>'
+ +'<rect x="42" y="8" width="28" height="8" rx="4" fill="#6E7891"/>'
+ +'<rect x="42" y="8" width="28" height="3.4" rx="1.7" fill="#A9B3C8"/>'
+ +'<path d="M70 9.4h8l1 2.6-1 2.6h-8z" fill="#4A5266"/>'
+ +'<path d="M78 9.4L94 12l-16 2.6z" fill="#D9E2F0"/>'
+ +'<path d="M78 9.4L94 12l-16 1.2z" fill="#FFFFFF"/></svg>';
 function throwDart(p){
   if(!BW||!BH||!p)return;
   if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
