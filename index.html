@@ -836,6 +836,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
           </div>
         </div>
         <button class="tbtn" id="btnUndo">1つ戻す</button>
+        <button class="tbtn" id="btnClose" disabled>このマスを閉じる</button>
         <div class="stat"><div class="eyebrow">開封</div>
           <b><span class="open-c" id="statOpen">0</span> / <span id="statAll">0</span></b></div>
         <div class="stat"><div class="eyebrow">受取合計</div><b id="statSum">0</b></div>
@@ -1065,7 +1066,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:44</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:46</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -2436,8 +2437,18 @@ function paintCur(){
     $("curLabel").textContent=cur&&cur.open?"開封ずみ — 次のパネルを選ぶ":"パネルをクリックして選ぶ";
     $("curCount").textContent="— / —";$("curBar").style.width="0%";
     $("btnPlus").disabled=$("btnMinus").disabled=true;
+    const reopen=!!(cur&&cur.open&&!isEdit());
+    $("btnClose").disabled=!reopen;
+    if(reopen){                       // 開いたマスも選べる：閉じるだけできる
+      card.classList.remove("none");
+      $("curNo").textContent="NO."+(cur.i+1);
+      $("curLabel").textContent="開封ずみ — 閉じられます";
+      $("curCount").textContent=fmt(cur.got)+" / "+fmt(cur.need);
+      $("curBar").style.width="100%";
+    }
     return;
   }
+  $("btnClose").disabled=true;
   const bg=$("curRingBg");
   if(bg){
     if(!cur||cur.open||isEdit()||noRing)bg.removeAttribute("d");
@@ -3676,6 +3687,14 @@ $("stage").addEventListener("wheel",ev=>{
   }
 },{passive:false});
 $("btnUndo").onclick=()=>{doUndo();paintCur()};
+$("btnClose").onclick=()=>{
+  if(!cur||!cur.open)return;
+  pushUndo();
+  cur.open=false;cur.got=0;cur.frozen=false;
+  cmpDone=false;
+  const c=$("cmp");if(c)c.remove();
+  render();paintCur();paintSel();save();
+};
 $("btnUndo2").onclick=()=>{doUndo();paintCur()};
 $("btnRedo").onclick=()=>{doRedo();paintCur()};
 
