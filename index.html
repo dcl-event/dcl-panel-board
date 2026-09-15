@@ -1068,7 +1068,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/14 15:48</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/15 20:08</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1431,7 +1431,7 @@ function genPieces(pat,W,H,o){
 
   if(pat==="darts"){
     const cx=W/2,cy=H/2;
-    const Rin=Math.min(W,H)/2,R=Math.hypot(W,H)/2*1.02;
+    const Rin=Math.min(W,H)/2,R=Math.hypot(W,H)/2*1.12;
     const rb=Rin*.14,ro=Rin*.25;            // ブル と アウターブル
     const bands=Math.max(2,Math.min(6,o.rings||3));
     const n=Math.max(3,Math.min(20,o.sectors||10));
@@ -1442,9 +1442,11 @@ function genPieces(pat,W,H,o){
       return poly(outer)+(r0>0?poly(inner):"");
     };
     const wedge=(r0,r1,a0,a1)=>{
+      // 弧を直線でつなぐので、外側ほど細かく刻まないと四隅に隙間ができる
+      const n=Math.max(18,Math.ceil((a1-a0)/.045));
       const p=[];
-      for(let t=0;t<=18;t++){const a=a0+(a1-a0)*t/18;p.push([cx+Math.cos(a)*r1,cy+Math.sin(a)*r1])}
-      for(let t=18;t>=0;t--){const a=a0+(a1-a0)*t/18;p.push([cx+Math.cos(a)*r0,cy+Math.sin(a)*r0])}
+      for(let t=0;t<=n;t++){const a=a0+(a1-a0)*t/n;p.push([cx+Math.cos(a)*r1,cy+Math.sin(a)*r1])}
+      for(let t=n;t>=0;t--){const a=a0+(a1-a0)*t/n;p.push([cx+Math.cos(a)*r0,cy+Math.sin(a)*r0])}
       return poly(p);
     };
     // 外側の帯から内側へ（あとから描く=内側が上）
@@ -1460,10 +1462,10 @@ function genPieces(pat,W,H,o){
         const outer=b===bands-1;
         const cap=outer?Math.min(Rin*.86,edge*.72):edge*.70;
         const rm=Math.min((r0+r1)/2,Math.max(r0+(r1-r0)*.20,cap));
-        const th=(outer?Math.min(r1,Rin)-r0:r1-r0),arc=rm*(a1-a0);
-        const room=Math.min(th,arc,edge*.52);
-        const m=room*.3;
-        const lx=clamp(cx+Math.cos(am)*rm,m,W-m),ly=clamp(cy+Math.sin(am)*rm,m,H-m);
+        const th=r1-r0,arc=rm*(a1-a0);
+        const room=Math.max(12,Math.min(th,arc,edge*.52));
+        const mx=room*1.5,my=room*.75;      // 文字が盤面からはみ出さないように
+        const lx=clamp(cx+Math.cos(am)*rm,mx,W-mx),ly=clamp(cy+Math.sin(am)*rm,my,H-my);
         push("d"+b+"_"+i,wedge(r0,r1,a0,a1),lx,ly,room*.95,
           b===bands-1?{edge:{x:cx,y:cy,r:Rin*.995}}:null);
       }
