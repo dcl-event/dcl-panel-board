@@ -774,6 +774,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
     <div class="menuwrap">
       <button class="tbtn ghost" id="btnMenu">ファイル ▾</button>
       <div class="menu" id="fileMenu" hidden>
+        <button id="btnObs">OBS用の窓を開く（盤面だけ）</button>
+        <hr>
         <button id="btnPng">PNGで保存</button>
         <button id="btnExport">設定を書き出す</button>
         <button id="btnImport">設定を読み込む</button>
@@ -1068,7 +1070,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;borde
       <div class="grp">④ そのほか</div>
       <div class="sect" data-k="help">
         <h3>使い方とショートカット<small>操作の一覧・版数</small></h3>
-        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/15 20:08</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
+        <p class="hint" style="margin:0 0 8px">版数 <b id="buildTag" style="color:var(--muted)">09/28 17:09</b>　／　古いままなら <kbd>⌘⇧R</kbd> で読み込み直してください。</p>
         <p class="hint">
           <b style="color:var(--muted)">編集</b>：パネルをクリックで選択、盤面をドラッグで範囲選択。グリッドなら矩形に選んで「結合」で大パネル。中央シェイプは<b style="color:var(--muted)">選んでからドラッグで移動</b>、右の「割り方」で大きさ・回転も変えられます。<br><br>
           <b style="color:var(--muted)">配信</b>：パネルをクリックして選ぶ → 下の <kbd>＋</kbd> <kbd>−</kbd> で加算・減算。選んだパネルは金の点線で囲まれ、下のバーに「いま何／いくつ」が出ます。開封すると次の未開封パネルに自動で移ります。<br>
@@ -1747,6 +1749,7 @@ function coverLoop(){
 /* ============ persistence ============ */
 let saveT=null;
 function save(){
+  if(applyingRemote)return;
   clearTimeout(saveT);
   saveT=setTimeout(()=>{
     try{
@@ -1758,6 +1761,28 @@ function save(){
     }
   },400);
 }
+let applyingRemote=false;
+function applyRemote(){
+  applyingRemote=true;
+  try{
+    const keepZoom=S.zoom,keepRail=S.railW,keepBar=S.barZ,keepLive=S.liveRail;
+    if(load()){
+      S.zoom=keepZoom;S.railW=keepRail;S.barZ=keepBar;S.liveRail=keepLive;
+      syncUI();applyImages();drawPatterns();patOpts();
+      drawStk();stkUI();syncArrowUI();
+      render();layout();paintCur();paintSel();
+      const t=$("saved");
+      if(t){t.textContent="ほかの画面から更新";t.style.color="var(--pink-deep,#FF57A0)";
+        setTimeout(()=>{t.style.color=""},1200);}
+    }
+  }catch(e){}
+  setTimeout(()=>{applyingRemote=false},60);
+}
+let remoteT=null;
+addEventListener("storage",e=>{
+  if(e.key!==KEY||!e.newValue)return;
+  clearTimeout(remoteT);remoteT=setTimeout(applyRemote,90);   // まとめて1回だけ反映
+});
 function load(){
   let raw=null;try{raw=localStorage.getItem(KEY)}catch(e){}
   if(!raw)return false;
@@ -5632,6 +5657,17 @@ function foldSections(){
     head.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();flip()}});
   });
 }
+$("btnObs").onclick=()=>{
+  const u=location.origin+location.pathname+"?solo=1";
+  window.open(u,"pb-obs","width=900,height=700");
+};
+/* ?solo=1 で開いたら最初から「盤面だけ」 */
+try{
+  if(/[?&]solo=1/.test(location.search)){
+    document.body.classList.add("solo");
+    frameTick(layout);setTimeout(layout,200);
+  }
+}catch(e){}
 $("btnMenu").onclick=e=>{e.stopPropagation();$("fileMenu").hidden=!$("fileMenu").hidden};
 $("stepEdit").onclick=e=>{e.stopPropagation();
   $("stepList").value=(S.steps||[1,10,100,1000,10000]).join(",");
